@@ -114,15 +114,33 @@ info "Creating directories..."
 mkdir -p "$INSTALL_DIR" "$DATA_DIR" "$CONFIG_DIR"
 chown -R $USER:$USER "$INSTALL_DIR" "$DATA_DIR" "$CONFIG_DIR"
 
+# ---- ensure git safe.directory is set for the target repo path ----
+# This avoids "detected dubious ownership" when the repo is owned by a non-root user.
+if command -v git >/dev/null 2>&1; then
+  # add safe.directory globally if not already present
+  if ! git config --global --get-all safe.directory | grep -qx "$CURRENT_DIR"; then
+    info "Adding $CURRENT_DIR to git safe.directory (avoids dubious ownership error)."
+    git config --global --add safe.directory "$CURRENT_DIR" || true
+  fi
+fi
+
 # ---- clone or update repo ----
 if [ -d "$CURRENT_DIR/.git" ]; then
   info "Repository already present. Pulling latest changes..."
+  # Ensure safe.directory is set for this directory (again, in case ownership changed)
+  if command -v git >/dev/null 2>&1; then
+    git config --global --add safe.directory "$CURRENT_DIR" || true
+  fi
   git -C "$CURRENT_DIR" fetch --all --tags
   git -C "$CURRENT_DIR" reset --hard origin/main
 else
   info "Cloning repository $REPO into $CURRENT_DIR ..."
   git clone "$REPO" "$CURRENT_DIR"
   chown -R $USER:$USER "$CURRENT_DIR"
+  # ensure safe.directory is added after clone (for subsequent runs)
+  if command -v git >/dev/null 2>&1; then
+    git config --global --add safe.directory "$CURRENT_DIR" || true
+  fi
 fi
 
 # ---- python venv & pip deps ----
@@ -151,7 +169,12 @@ fi
 info "Initializing database (if not present)..."
 source "$VENV_DIR/bin/activate"
 if [ -f "$CURRENT_DIR/backend/app/db_init.py" ]; then
-  python "$CURRENT_DIR/backend/app/db_init.py"
+  # run db_init in a way that avoids relative import issues
+  # try module-style invocation first
+  python -c "import sys; sys.path.insert(0, '$CURRENT_DIR/backend'); import app.db_init as dbinit; dbinit.init_db()" || {
+    # fallback to direct script execution
+    python "$CURRENT_DIR/backend/app/db_init.py"
+  }
 else
   warn "db_init.py not found in repo; skipping DB init. Ensure DB is created manually or add db_init.py."
 fi
@@ -265,5 +288,3 @@ echo "  sudo systemctl status $SERVICE_NAME"
 echo "  sudo journalctl -u $SERVICE_NAME -f"
 echo "  sudo tail -n 200 /var/log/nginx/error.log"
 echo "-----------------------------------------"
-
-
