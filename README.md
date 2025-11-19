@@ -15,4 +15,16 @@ Features:
 
 This version is optimized for installation on Linux VMs/LXCs (no Docker).
 
+# Component Storage — Self-hosted Electronic Component Inventory
+
+A modern, self-hosted full-stack inventory system for electronic components.
+This repo runs locally on a Linux VM / LXC without Docker.
+
+## Quick install (on target LXC/VM)
+Run as root (or via sudo):
+```bash
+curl -sSL https://raw.githubusercontent.com/JungleeAadmi/component-storage/main/scripts/install.sh | sudo bash
+
+
 Repository: https://github.com/JungleeAadmi/component-storage.git
+
