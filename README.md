@@ -26,21 +26,23 @@ Run as root (or via sudo):
 curl -sSL https://raw.githubusercontent.com/JungleeAadmi/component-storage/main/scripts/install.sh | sudo bash
 
 ```
-
 ## Updates
 
 ```
 curl -sSL https://raw.githubusercontent.com/JungleeAadmi/component-storage/main/scripts/update.sh | sudo bash
 
 ```
----
+## Uninstall
 
 ```
 curl -sSL https://raw.githubusercontent.com/JungleeAadmi/component-storage/main/scripts/uninstall.sh | sudo bash
+
 ```
----
+## Remove everything
+
 ```
 curl -sSL https://raw.githubusercontent.com/JungleeAadmi/component-storage/main/scripts/uninstall.sh | sudo bash -- --purge
+
 ```
 
 ## Project Layout
