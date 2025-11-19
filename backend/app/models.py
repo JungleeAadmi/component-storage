@@ -1,51 +1,57 @@
-from sqlalchemy import Column, Integer, String, Text, JSON, Float, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from .db import Base
+from app.db import Base
 
-class Storage(Base):
-    __tablename__ = "storages"
+class StorageUnit(Base):
+    __tablename__ = "storage_units"
+
     id = Column(Integer, primary_key=True, index=True)
-    code = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
+    type = Column(String, nullable=False)  # "type1" or "type2"
     description = Column(Text, nullable=True)
+
+    partitions = relationship("Partition", back_populates="storage_unit", cascade="all,delete")
+    trays = relationship("Tray", back_populates="storage_unit", cascade="all,delete")
+
 
 class Partition(Base):
     __tablename__ = "partitions"
-    id = Column(Integer, primary_key=True, index=True)
-    storage_id = Column(Integer, ForeignKey("storages.id"), nullable=False)
-    code = Column(String, nullable=False)
+
+    id = Column(Integer, primary_key=True)
+    storage_unit_id = Column(Integer, ForeignKey("storage_units.id"))
+    label = Column(String, nullable=False)     # e.g. "TOP" or "BIG"
     rows = Column(Integer, nullable=False)
     cols = Column(Integer, nullable=False)
-    cell_type = Column(String, default="normal")
 
-    storage = relationship("Storage")
+    storage_unit = relationship("StorageUnit", back_populates="partitions")
 
-class Cell(Base):
-    __tablename__ = "cells"
-    id = Column(Integer, primary_key=True, index=True)
-    storage_id = Column(Integer, ForeignKey("storages.id"), nullable=False)
-    partition_id = Column(Integer, ForeignKey("partitions.id"), nullable=False)
-    col = Column(String, nullable=False)
-    row = Column(Integer, nullable=False)
-    address = Column(String, unique=True, index=True, nullable=False)
-    alias = Column(String, nullable=True)
 
-    storage = relationship("Storage")
-    partition = relationship("Partition")
+class Tray(Base):
+    __tablename__ = "trays"
 
-class Item(Base):
-    __tablename__ = "items"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True, nullable=False)
-    item_type = Column(String, nullable=True)
-    specs = Column(JSON, nullable=True)
-    quantity = Column(Float, default=0)
-    unit = Column(String, default="pcs")
-    min_qty_alert = Column(Float, default=0)
-    location_cell_id = Column(Integer, ForeignKey("cells.id"), nullable=False)
-    storage_code = Column(String, nullable=False)
-    address = Column(String, nullable=False, index=True)
-    photos = Column(JSON, nullable=True)
-    tags = Column(String, nullable=True)
-    vendor = Column(String, nullable=True)
-    purchase_link = Column(String, nullable=True)
+    id = Column(Integer, primary_key=True)
+    storage_unit_id = Column(Integer, ForeignKey("storage_units.id"))
+    partition_id = Column(Integer, ForeignKey("partitions.id"))
+
+    code = Column(String, index=True)       # A1, B5, BIG-A3, etc.
+    description = Column(Text, nullable=True)
+
+    storage_unit = relationship("StorageUnit", back_populates="trays")
+    components = relationship("Component", back_populates="tray", cascade="all,delete")
+
+
+class Component(Base):
+    __tablename__ = "components"
+
+    id = Column(Integer, primary_key=True)
+    tray_id = Column(Integer, ForeignKey("trays.id"))
+
+    name = Column(String, nullable=False)
+    qty = Column(Integer, default=1)
+    type = Column(String, nullable=True)
+    specs = Column(String, nullable=True)
+    link = Column(String, nullable=True)
+    manufacturer = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+
+    tray = relationship("Tray", back_populates="components")

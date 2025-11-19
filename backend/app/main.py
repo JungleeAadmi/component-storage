@@ -1,44 +1,26 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from . import crud, schemas, db
+from app.routers import storage_units, trays, components, search, uploads
+from app.config import settings
 
-app = FastAPI(title="Component Storage", version="0.1.0")
+app = FastAPI(title="Component Storage API")
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten in production to your domain
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# If frontend build is placed in backend/app/static, serve it
-try:
-    app.mount("/", StaticFiles(directory="static", html=True), name="static")
-except Exception:
-    pass
+# Routers
+app.include_router(storage_units.router, prefix=settings.API_PREFIX)
+app.include_router(trays.router, prefix=settings.API_PREFIX)
+app.include_router(components.router, prefix=settings.API_PREFIX)
+app.include_router(search.router, prefix=settings.API_PREFIX)
+app.include_router(uploads.router, prefix=settings.API_PREFIX)
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-@app.post("/storages", response_model=schemas.Storage)
-def create_storage(storage: schemas.StorageCreate):
-    return crud.create_storage(storage)
-
-@app.get("/storages")
-def list_storages():
-    return crud.list_storages()
-
-@app.post("/storages/{storage_id}/partitions")
-def create_partition(storage_id: int, payload: dict):
-    return crud.create_partition(storage_id, payload)
-
-@app.post("/cells/{cell_id}/items", response_model=schemas.Item)
-def add_item(cell_id: int, item: schemas.ItemCreate):
-    return crud.create_item(cell_id, item)
-
-@app.get("/items")
-def search_items(q: str = "", limit: int = 50):
-    return crud.search_items(q, limit)
+# Root fallback
+@app.get("/")
+async def root():
+    return {"status": "Component Storage API running"}

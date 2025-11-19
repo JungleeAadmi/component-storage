@@ -1,33 +1,22 @@
-#!/usr/bin/env python3
+import asyncio
 import os
 import sys
 
-# Ensure that package imports work when running the script directly
-# by adding the backend folder to sys.path if necessary.
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.abspath(os.path.join(HERE, ".."))  # backend/
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+ROOT = os.path.abspath(os.path.join(HERE))
+PARENT = os.path.abspath(os.path.join(HERE, ".."))
+sys.path.insert(0, ROOT)
+sys.path.insert(0, PARENT)
 
-# Now import using package-style import
-try:
-    from app.db import engine, Base  # app/db.py must expose engine and Base
-except Exception:
-    # fallback: import existing engine / Base path
-    from db import engine  # last resort (not ideal)
-    from models import Base
+from app.db import engine
+from app.models import Base
+
+async def init():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 def init_db():
-    db_path = os.environ.get("DATABASE_PATH", "/var/lib/component-storage/app.db")
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    print("Initializing database at:", db_path)
-    # create tables
-    try:
-        from app.models import Base as AppBase
-        AppBase.metadata.create_all(bind=engine)
-    except Exception:
-        # fallback if package import structure differs
-        Base.metadata.create_all(bind=engine)
+    asyncio.run(init())
     print("Database initialized.")
 
 if __name__ == "__main__":

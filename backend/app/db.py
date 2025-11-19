@@ -1,17 +1,21 @@
-import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base, scoped_session
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.orm import declarative_base
+from app.config import settings
 
-DB_PATH = os.getenv("DATABASE_PATH", "/var/lib/component-storage/app.db")
-DB_URL = f"sqlite:///{DB_PATH}"
+DATABASE_URL = settings.DATABASE_URL.replace("sqlite:///", "sqlite+aiosqlite:///")
 
-engine = create_engine(DB_URL, connect_args={"check_same_thread": False})
-SessionLocal = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+engine = create_async_engine(
+    DATABASE_URL, echo=False, future=True
+)
+
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    autocommit=False,
+    autoflush=False,
+)
+
 Base = declarative_base()
 
-def get_db_session():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_session():
+    async with AsyncSessionLocal() as session:
+        yield session
