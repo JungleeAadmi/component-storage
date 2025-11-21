@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { componentsAPI } from '../services/api'
-import { Search, Trash2, Plus, Minus, MapPin, ExternalLink, AlertTriangle } from 'lucide-react'
+import { componentsAPI, containersAPI } from '../services/api'
+import { Search, Trash2, Plus, Minus, MapPin, ExternalLink, AlertTriangle, Edit2, X } from 'lucide-react'
 import { getCategoryBadgeClass, getStockBadgeClass, cn } from '../utils/helpers'
 
 export default function ComponentsLibrary() {
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [stockFilter, setStockFilter] = useState('all')
+  const [editingComponent, setEditingComponent] = useState(null)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   const queryClient = useQueryClient()
 
@@ -16,10 +18,24 @@ export default function ComponentsLibrary() {
     queryFn: componentsAPI.getAll,
   })
 
+  const { data: containers = [] } = useQuery({
+    queryKey: ['containers'],
+    queryFn: containersAPI.getAll,
+  })
+
   const updateQuantityMutation = useMutation({
     mutationFn: ({ id, quantity }) => componentsAPI.updateQuantity(id, quantity),
     onSuccess: () => {
       queryClient.invalidateQueries(['components'])
+    },
+  })
+
+  const updateComponentMutation = useMutation({
+    mutationFn: ({ id, data }) => componentsAPI.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['components'])
+      setShowEditModal(false)
+      setEditingComponent(null)
     },
   })
 
@@ -33,6 +49,19 @@ export default function ComponentsLibrary() {
   const handleQuantityChange = (component, delta) => {
     const newQuantity = Math.max(0, component.quantity + delta)
     updateQuantityMutation.mutate({ id: component.id, quantity: newQuantity })
+  }
+
+  const handleEdit = (component) => {
+    setEditingComponent({ ...component })
+    setShowEditModal(true)
+  }
+
+  const handleUpdateComponent = (e) => {
+    e.preventDefault()
+    updateComponentMutation.mutate({
+      id: editingComponent.id,
+      data: editingComponent,
+    })
   }
 
   const handleDelete = (component) => {
@@ -158,13 +187,22 @@ export default function ComponentsLibrary() {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(component)}
-                  className="p-1 text-[var(--color-text-secondary)] hover:text-red-500"
-                  title="Delete component"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleEdit(component)}
+                    className="p-1 text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 rounded"
+                    title="Edit component"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(component)}
+                    className="p-1 text-[var(--color-text-secondary)] hover:text-red-500 hover:bg-red-500/10 rounded"
+                    title="Delete component"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Details */}
@@ -247,6 +285,223 @@ export default function ComponentsLibrary() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingComponent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowEditModal(false)} />
+          <div className="relative w-full max-w-2xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+                Edit Component
+              </h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 hover:bg-[var(--color-secondary)] rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateComponent} className="space-y-6">
+              {/* Basic Info */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-[var(--color-text-primary)]">Basic Information</h3>
+                <div>
+                  <label className="label">Component Name *</label>
+                  <input
+                    type="text"
+                    value={editingComponent.name}
+                    onChange={(e) => setEditingComponent({ ...editingComponent, name: e.target.value })}
+                    className="input"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Category</label>
+                    <input
+                      type="text"
+                      value={editingComponent.category || ''}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, category: e.target.value })}
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Value/Rating</label>
+                    <input
+                      type="text"
+                      value={editingComponent.value || ''}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, value: e.target.value })}
+                      className="input"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quantity */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-[var(--color-text-primary)]">Quantity</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Current Quantity</label>
+                    <input
+                      type="number"
+                      value={editingComponent.quantity}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, quantity: parseInt(e.target.value) || 0 })}
+                      className="input"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Minimum Quantity</label>
+                    <input
+                      type="number"
+                      value={editingComponent.min_quantity}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, min_quantity: parseInt(e.target.value) || 0 })}
+                      className="input"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-[var(--color-text-primary)]">Storage Location</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Container</label>
+                    <select
+                      value={editingComponent.container_id || ''}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, container_id: e.target.value })}
+                      className="input"
+                    >
+                      <option value="">No container</option>
+                      {containers.map(container => (
+                        <option key={container.id} value={container.id}>
+                          {container.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Tray Address</label>
+                    <input
+                      type="text"
+                      value={editingComponent.tray_address || ''}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, tray_address: e.target.value })}
+                      className="input"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Details */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-[var(--color-text-primary)]">Additional Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Manufacturer</label>
+                    <input
+                      type="text"
+                      value={editingComponent.manufacturer || ''}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, manufacturer: e.target.value })}
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Part Number</label>
+                    <input
+                      type="text"
+                      value={editingComponent.part_number || ''}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, part_number: e.target.value })}
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Package Type</label>
+                    <input
+                      type="text"
+                      value={editingComponent.package_type || ''}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, package_type: e.target.value })}
+                      className="input"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Price</label>
+                    <input
+                      type="text"
+                      value={editingComponent.price || ''}
+                      onChange={(e) => setEditingComponent({ ...editingComponent, price: e.target.value })}
+                      className="input"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="label">Purchase Link</label>
+                  <input
+                    type="url"
+                    value={editingComponent.purchase_link || ''}
+                    onChange={(e) => setEditingComponent({ ...editingComponent, purchase_link: e.target.value })}
+                    className="input"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Datasheet URL</label>
+                  <input
+                    type="url"
+                    value={editingComponent.datasheet_url || ''}
+                    onChange={(e) => setEditingComponent({ ...editingComponent, datasheet_url: e.target.value })}
+                    className="input"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Specifications</label>
+                  <textarea
+                    value={editingComponent.specifications || ''}
+                    onChange={(e) => setEditingComponent({ ...editingComponent, specifications: e.target.value })}
+                    className="input"
+                    rows="3"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">Notes</label>
+                  <textarea
+                    value={editingComponent.notes || ''}
+                    onChange={(e) => setEditingComponent({ ...editingComponent, notes: e.target.value })}
+                    className="input"
+                    rows="3"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="btn btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateComponentMutation.isPending}
+                  className="btn btn-primary flex-1"
+                >
+                  {updateComponentMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
