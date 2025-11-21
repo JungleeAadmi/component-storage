@@ -107,7 +107,7 @@ export default function AddComponent() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="label">Component Name *</label>
+              <label className="label">Component Name</label>
               <input
                 type="text"
                 value={formData.name}
@@ -186,7 +186,7 @@ export default function AddComponent() {
               />
             </div>
             <div>
-              <label className="label">Minimum Quantity (for alerts)</label>
+              <label className="label">Minimum Quantity</label>
               <input
                 type="number"
                 value={formData.min_quantity}
@@ -249,7 +249,7 @@ export default function AddComponent() {
               />
             </div>
             <div>
-              <label className="label">Part Number</label>
+              <label className="label">Part Number or SKU</label>
               <input
                 type="text"
                 value={formData.part_number}
@@ -259,7 +259,7 @@ export default function AddComponent() {
               />
             </div>
             <div>
-              <label className="label">Price</label>
+              <label className="label">Price per piece</label>
               <input
                 type="text"
                 value={formData.price}
