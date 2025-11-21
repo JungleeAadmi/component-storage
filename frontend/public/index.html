@@ -1,34 +1,47 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Component Storage - Inventory Management</title>
-    
-    <!-- Favicons & app icons (EXACT PATTERN FROM YOUR WORKING APP) -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    
-    <!-- PWA manifest -->
-    <link rel="manifest" href="/manifest.json" />
-    
-    <!-- Windows tile -->
-    <meta name="msapplication-TileColor" content="#21808d" />
-    <meta name="msapplication-TileImage" content="/mstile-144x144.png" />
-    
-    <!-- Apple PWA & iOS meta (helps "Open as Web App") -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Component Storage" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    
-    <!-- Theme color -->
-    <meta name="theme-color" content="#21808d" />
-    <meta name="description" content="Self-hosted electronic component inventory management system" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Component Storage - Inventory Management</title>
+
+<!-- Favicons & app icons (use absolute root paths) -->
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#21808d" />
+
+<!-- PWA manifest -->
+<link rel="manifest" href="/manifest.json" />
+
+<!-- Windows tile -->
+<meta name="msapplication-TileColor" content="#21808d" />
+<meta name="msapplication-TileImage" content="/mstile-144x144.png" />
+
+<!-- Apple PWA & iOS meta (helps "Open as Web App") -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Component Storage" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+<!-- Theme color -->
+<meta name="theme-color" content="#21808d" />
+<meta name="description" content="Self-hosted electronic component inventory management system" />
+
+<!-- Minimal service worker registration to help Android/Chrome treat the site as a PWA -->
+<script>
+if ('serviceWorker' in navigator) {
+window.addEventListener('load', function() {
+navigator.serviceWorker.register('/sw.js').catch(function(err){
+// registration failed — not critical for basic bookmarking, but required for installability
+console.warn('ServiceWorker registration failed:', err);
+});
+});
+}
+</script>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/main.jsx"></script>
+</body>
 </html>
