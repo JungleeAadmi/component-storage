@@ -13,21 +13,33 @@ if [ ! -d "$INSTALL_DIR" ]; then
     exit 1
 fi
 
+# 0. Stop Service (Critical for DB integrity during backup)
+echo "Stopping service to ensure data integrity..."
+pm2 stop inventra || true
+
 # 1. Backup User Data
 echo "Backing up user data to $BACKUP_PATH..."
 mkdir -p "$BACKUP_PATH"
+
 # Backup Database
 if [ -d "$INSTALL_DIR/server/data" ]; then
     cp -r "$INSTALL_DIR/server/data" "$BACKUP_PATH/"
 fi
+
 # Backup Uploaded Images
 if [ -d "$INSTALL_DIR/server/uploads" ]; then
     cp -r "$INSTALL_DIR/server/uploads" "$BACKUP_PATH/"
 fi
 
+# Backup Configuration (.env)
+if [ -f "$INSTALL_DIR/server/.env" ]; then
+    cp "$INSTALL_DIR/server/.env" "$BACKUP_PATH/"
+fi
+
 # 2. Update Code
 echo "Pulling latest code..."
 cd "$INSTALL_DIR"
+# Reset hard to force overwrite of local code changes (but not ignored data files)
 git reset --hard
 git pull
 
@@ -43,6 +55,10 @@ if [ -d "$BACKUP_PATH/data" ]; then
 fi
 if [ -d "$BACKUP_PATH/uploads" ]; then
     cp -r "$BACKUP_PATH/uploads/"* server/uploads/ 2>/dev/null || true
+fi
+# Restore .env if it was missing after pull (though .gitignore usually protects it)
+if [ ! -f "server/.env" ] && [ -f "$BACKUP_PATH/.env" ]; then
+    cp "$BACKUP_PATH/.env" server/.env
 fi
 
 # 4. Re-install & Re-build
