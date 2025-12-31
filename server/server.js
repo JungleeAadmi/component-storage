@@ -3,8 +3,8 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 
-// Load env vars
-dotenv.config();
+// Load env vars - FIX: Explicitly point to the .env file in the server directory
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Import DB config
 require('./config/db');
