@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const db = require('../config/db');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -66,5 +67,29 @@ exports.getMe = async (req, res) => {
     res.json(user);
   } else {
     res.status(404).json({ message: 'User not found' });
+  }
+};
+
+exports.updatePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const stmt = db.prepare('SELECT password FROM users WHERE id = ?');
+    const user = stmt.get(userId);
+
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(401).json({ message: 'Current password incorrect' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    const updateStmt = db.prepare('UPDATE users SET password = ? WHERE id = ?');
+    updateStmt.run(hashedPassword, userId);
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

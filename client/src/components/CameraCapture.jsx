@@ -1,16 +1,16 @@
-import { useRef, useState, useCallback } from 'react';
-import { Camera, X, RefreshCw } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 
 const CameraCapture = ({ onCapture, onClose }) => {
   const videoRef = useRef(null);
-  const [stream, setStream] = useState(null);
+  const streamRef = useRef(null);
 
   const startCamera = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } // Use back camera on phones
+        video: { facingMode: 'environment' } 
       });
-      setStream(mediaStream);
+      streamRef.current = mediaStream;
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
@@ -18,6 +18,13 @@ const CameraCapture = ({ onCapture, onClose }) => {
       console.error("Camera error:", err);
       alert("Unable to access camera. Please allow permissions.");
       onClose();
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
   };
 
@@ -30,23 +37,14 @@ const CameraCapture = ({ onCapture, onClose }) => {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(videoRef.current, 0, 0);
     
-    // Convert to blob and send back
     canvas.toBlob((blob) => {
       const file = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
-      onCapture(file);
       stopCamera();
+      onCapture(file);
     }, 'image/jpeg', 0.8);
   };
 
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-  };
-
-  // Start on mount
-  useState(() => {
+  useEffect(() => {
     startCamera();
     return () => stopCamera();
   }, []);

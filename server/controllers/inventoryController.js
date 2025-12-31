@@ -1,6 +1,6 @@
 const Container = require('../models/Container');
 const Component = require('../models/Component');
-const db = require('../config/db'); // Needed for transactions if we get complex
+const db = require('../config/db');
 
 // --- Containers ---
 
@@ -28,17 +28,12 @@ exports.getContainerById = (req, res) => {
 
 exports.createContainer = (req, res) => {
   const { name, description, config } = req.body;
-  // config expected format: [{ name: 'Top', rows: 6, cols: 5 }, { name: 'Bot', rows: 3, cols: 3 }]
-
   try {
-    // 1. Create Container
     const containerResult = Container.createContainer(name, description);
     const containerId = containerResult.lastInsertRowid;
 
-    // 2. Create Sections
     if (config && Array.isArray(config)) {
       config.forEach((section, index) => {
-        // Generate designation char (A, B, C...)
         const char = String.fromCharCode(65 + index);
         Container.createSection({
           container_id: containerId,
@@ -50,8 +45,21 @@ exports.createContainer = (req, res) => {
         });
       });
     }
-
     res.status(201).json({ message: 'Container created', id: containerId });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.deleteContainer = (req, res) => {
+  try {
+    const stmt = db.prepare('DELETE FROM containers WHERE id = ?');
+    const result = stmt.run(req.params.id);
+    if (result.changes > 0) {
+      res.json({ message: 'Container removed' });
+    } else {
+      res.status(404).json({ message: 'Container not found' });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -68,10 +76,23 @@ exports.getComponentsBySection = (req, res) => {
   }
 };
 
+exports.getComponentById = (req, res) => {
+  try {
+    const stmt = db.prepare('SELECT * FROM components WHERE id = ?');
+    const component = stmt.get(req.params.id);
+    if (component) {
+        try { component.custom_data = JSON.parse(component.custom_data); } catch(e) {}
+        res.json(component);
+    } else {
+        res.status(404).json({ message: 'Component not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.addComponent = (req, res) => {
-  // req.file is available thanks to multer middleware
   const { section_id, grid_position, name, quantity, specification, purchase_link, custom_data } = req.body;
-  
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
 
   try {
@@ -81,12 +102,49 @@ exports.addComponent = (req, res) => {
       name,
       quantity,
       specification,
-      custom_data: JSON.stringify(custom_data || {}),
+      custom_data: custom_data, 
       image_url: imageUrl,
       purchase_link
     });
-    
     res.status(201).json({ message: 'Component added', id: result.lastInsertRowid });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.updateComponent = (req, res) => {
+  const { name, quantity, specification, purchase_link, custom_data } = req.body;
+  const id = req.params.id;
+  
+  try {
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = `/uploads/${req.file.filename}`;
+    }
+
+    const current = db.prepare('SELECT image_url FROM components WHERE id = ?').get(id);
+    if (!current) return res.status(404).json({ message: 'Component not found' });
+
+    const finalImage = imageUrl || current.image_url;
+
+    const stmt = db.prepare(`
+      UPDATE components 
+      SET name = ?, quantity = ?, specification = ?, purchase_link = ?, custom_data = ?, image_url = ?
+      WHERE id = ?
+    `);
+    
+    stmt.run(name, quantity, specification, purchase_link, custom_data, finalImage, id);
+    res.json({ message: 'Component updated' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.deleteComponent = (req, res) => {
+  try {
+    const stmt = db.prepare('DELETE FROM components WHERE id = ?');
+    stmt.run(req.params.id);
+    res.json({ message: 'Component deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

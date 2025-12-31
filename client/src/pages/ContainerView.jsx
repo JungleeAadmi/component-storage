@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowLeft, Printer, Box, Layers, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Layers, ArrowRight } from 'lucide-react';
 import api from '../services/api';
 
 const ContainerView = () => {
@@ -24,51 +24,26 @@ const ContainerView = () => {
     fetchContainer();
   }, [id]);
 
-  const printQR = () => {
-    const printWindow = window.open('', '', 'width=600,height=600');
-    printWindow.document.write(`
-      <html>
-        <body style="text-align:center; font-family: sans-serif;">
-          <h2>${container.name}</h2>
-          <div id="qr-target"></div>
-          <p>Scan to Manage</p>
-        </body>
-      </html>
-    `);
-    // Note: In a real app, you'd render the QR canvas into the window. 
-    // For simplicity, we just trigger browser print on the current page for now 
-    // or you can implement a dedicated print component.
-    window.print();
-  };
-
   if (loading) return <div className="p-8 text-center text-gray-500">Loading storage unit...</div>;
   if (!container) return <div className="p-8 text-center text-red-500">Container not found</div>;
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <button onClick={() => navigate(-1)} className="p-2 bg-dark-800 rounded-lg text-gray-400 hover:text-white">
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-white">{container.name}</h1>
-            <p className="text-gray-400 text-sm">{container.description || "No description"}</p>
-          </div>
-        </div>
-        <button onClick={printQR} className="p-2 bg-dark-800 rounded-lg text-primary-400 hover:bg-dark-700">
-          <Printer size={20} />
+      <div className="flex items-center space-x-4 mb-8">
+        <button onClick={() => navigate(-1)} className="p-2 bg-dark-800 rounded-lg text-gray-400 hover:text-white">
+          <ArrowLeft size={20} />
         </button>
+        <div>
+          <h1 className="text-2xl font-bold text-white">{container.name}</h1>
+          <p className="text-gray-400 text-sm">{container.description || "No description"}</p>
+        </div>
       </div>
 
-      {/* QR Code Card (Visual) */}
       <div className="bg-white p-4 rounded-xl w-fit mx-auto mb-8 hidden md:block">
         <QRCodeSVG value={`${window.location.origin}/container/${container.id}`} size={128} />
         <p className="text-black text-xs text-center mt-2 font-bold">{container.name}</p>
       </div>
 
-      {/* Sections List */}
       <h2 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
         <Layers size={18} />
         <span>Trays & Drawers</span>

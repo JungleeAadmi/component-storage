@@ -11,15 +11,12 @@ const TrayView = () => {
   const [components, setComponents] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // 1. Fetch components
-        const compRes = await api.get(`/inventory/sections/${id}/components`);
-        setComponents(compRes.data);
+  const fetchData = async () => {
+    try {
+      const compRes = await api.get(`/inventory/sections/${id}/components`);
+      setComponents(compRes.data);
 
-        // 2. Fetch section details (Using the fallback logic from before)
-        // Ideally backend should have /api/inventory/sections/:id
+      if (!section) {
         const containersRes = await api.get('/inventory/containers');
         for (const c of containersRes.data) {
             const detail = await api.get(`/inventory/containers/${c.id}`);
@@ -29,12 +26,15 @@ const TrayView = () => {
                 break;
             }
         }
-      } catch (error) {
-        console.error("Fetch error", error);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Fetch error", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [id]);
 
@@ -53,8 +53,11 @@ const TrayView = () => {
         </div>
       </div>
 
-      {/* Use the new GridRenderer */}
-      <GridRenderer section={section} components={components} />
+      <GridRenderer 
+        section={section} 
+        components={components} 
+        onUpdate={fetchData} 
+      />
     </div>
   );
 };
