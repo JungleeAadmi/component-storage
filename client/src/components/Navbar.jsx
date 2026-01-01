@@ -13,13 +13,18 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-3 group">
-            {/* Logo Image - Using high res 192x192 */}
-            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-primary-600/20 group-hover:scale-105 transition-transform bg-primary-600">
+            {/* Logo Image - Removed blue background and shadow */}
+            <div className="w-10 h-10 rounded-xl overflow-hidden group-hover:scale-105 transition-transform">
                  <img 
                     src="/android-chrome-192x192.png" 
                     alt="I" 
                     className="w-full h-full object-cover" 
-                    onError={(e) => {e.target.style.display='none';}} 
+                    onError={(e) => {
+                        e.target.style.display='none';
+                        // Fallback styling if image fails
+                        e.target.parentElement.classList.add('bg-dark-700', 'flex', 'items-center', 'justify-center');
+                        e.target.parentElement.innerHTML = '<span class="text-white font-bold">I</span>';
+                    }} 
                  />
             </div>
             <div className="flex flex-col">
