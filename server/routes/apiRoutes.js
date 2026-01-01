@@ -15,25 +15,25 @@ const {
   getComponentById,
   updateComponent,
   deleteComponent,
-  deleteAttachment // New
+  deleteAttachment
 } = require('../controllers/inventoryController');
 
 const { globalSearch } = require('../controllers/searchController');
 
-// Helper for file uploads
+// Helper for component uploads
 const uploadFields = upload.fields([
   { name: 'image', maxCount: 1 }, 
   { name: 'attachments', maxCount: 10 }
 ]);
 
-// Container Routes
+// Container Routes - NOW WITH IMAGE UPLOAD
 router.route('/containers')
   .get(protect, getContainers)
-  .post(protect, createContainer);
+  .post(protect, upload.single('image'), createContainer);
 
 router.route('/containers/:id')
   .get(protect, getContainerById)
-  .put(protect, updateContainer)
+  .put(protect, upload.single('image'), updateContainer)
   .delete(protect, deleteContainer);
 
 // Section Routes
@@ -46,7 +46,7 @@ router.get('/components/:id', protect, getComponentById);
 router.put('/components/:id', protect, uploadFields, updateComponent);
 router.delete('/components/:id', protect, deleteComponent);
 
-// Attachment Route (New)
+// Attachment Route
 router.delete('/attachments/:id', protect, deleteAttachment);
 
 // Search Route

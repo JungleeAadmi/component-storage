@@ -1,49 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { Trash2, Edit2 } from 'lucide-react';
+import { Trash2, Edit2, Box } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useLongPress from '../hooks/useLongPress';
 import { useState } from 'react';
 import api from '../services/api';
-
-const ContainerVisualizer = ({ sections }) => {
-  if (!sections || sections.length === 0) {
-    return <div className="w-full h-full bg-dark-800 rounded flex items-center justify-center text-[8px] text-gray-600">Empty</div>;
-  }
-
-  // Calculate total rows to distribute height proportionally
-  const totalRows = sections.reduce((acc, s) => acc + (s.rows || 1), 0);
-
-  return (
-    <div className="w-full h-full flex flex-col gap-[2px] p-[4px]">
-      {sections.map((section, idx) => {
-        // Calculate relative height percentage, min 10%
-        const heightPercent = Math.max((section.rows / totalRows) * 100, 10);
-        
-        return (
-          <div 
-            key={idx} 
-            className="w-full border border-primary-500/30 bg-primary-900/10 rounded-[2px] overflow-hidden flex flex-col"
-            style={{ height: `${heightPercent}%` }}
-          >
-            {/* Mini Grid Representation */}
-            <div 
-                className="w-full h-full grid gap-[1px] content-stretch"
-                style={{ 
-                    gridTemplateColumns: `repeat(${Math.min(section.cols, 8)}, 1fr)`, // Cap cols at 8 for visual sanity
-                    gridTemplateRows: `repeat(${Math.min(section.rows, 8)}, 1fr)` 
-                }}
-            >
-                {/* Render only enough cells to fill the visual, capped at 20 to prevent DOM overload */}
-                {Array.from({ length: Math.min(section.rows * section.cols, 20) }).map((_, i) => (
-                    <div key={i} className="bg-primary-500/20 rounded-[1px]"></div>
-                ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
 
 const ContainerCard = ({ container, onUpdate }) => {
   const navigate = useNavigate();
@@ -89,19 +49,31 @@ const ContainerCard = ({ container, onUpdate }) => {
         {...bind}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="bg-dark-800 p-4 rounded-2xl border border-dark-700 hover:border-primary-500/50 hover:shadow-lg hover:shadow-primary-500/10 transition-all cursor-pointer h-full flex flex-col items-center"
+        className="bg-dark-800 p-0 pb-4 rounded-2xl border border-dark-700 hover:border-primary-500/50 hover:shadow-lg hover:shadow-primary-500/10 transition-all cursor-pointer h-full flex flex-col items-center overflow-hidden"
       >
-        {/* Dynamic Icon Container */}
-        <div className="w-16 h-16 mb-3 bg-dark-900 rounded-lg border border-dark-600 overflow-hidden shadow-inner">
-             <ContainerVisualizer sections={container.sections} />
+        {/* Full Image Cover */}
+        <div className="w-full aspect-[4/3] bg-dark-900 border-b border-dark-700 overflow-hidden relative">
+             {container.image_url ? (
+                 <img 
+                    src={container.image_url} 
+                    alt={container.name} 
+                    className="w-full h-full object-cover"
+                 />
+             ) : (
+                 <div className="w-full h-full flex items-center justify-center bg-dark-800/50">
+                    <Box size={40} className="text-dark-600" />
+                 </div>
+             )}
+             
+             {/* Gradient Overlay for Text Visibility */}
+             <div className="absolute inset-0 bg-gradient-to-t from-dark-800 to-transparent opacity-50"></div>
         </div>
         
         {/* Text Info */}
-        <div className="text-center w-full">
-          <h3 className="text-white font-semibold text-sm sm:text-base truncate w-full px-1">
+        <div className="text-center w-full px-3 mt-3">
+          <h3 className="text-white font-bold text-lg truncate w-full">
             {container.name || 'Untitled'}
           </h3>
-          {/* Section count removed as requested */}
         </div>
       </motion.div>
 

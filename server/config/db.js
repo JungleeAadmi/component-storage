@@ -10,11 +10,10 @@ if (!fs.existsSync(dataDir)) {
 
 // Initialize the database file
 const dbPath = path.join(dataDir, 'inventra.db');
-const db = new Database(dbPath, { verbose: null }); // verbose: null to keep logs clean
+const db = new Database(dbPath, { verbose: null }); 
 db.pragma('journal_mode = WAL');
 
 // --- INITIALIZE TABLES ---
-// We create tables if they don't exist yet.
 
 // 1. Users Table
 db.exec(`
@@ -28,40 +27,51 @@ db.exec(`
   )
 `);
 
-// 2. Containers Table (The physical boxes/cabinets)
+// 2. Containers Table (Updated with image_url)
 db.exec(`
   CREATE TABLE IF NOT EXISTS containers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT,
+    image_url TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
 
-// 3. Sections Table (The Trays/Drawers inside containers)
+// Migration: Add image_url to existing containers table if missing
+try {
+  const columns = db.pragma('table_info(containers)');
+  if (!columns.some(col => col.name === 'image_url')) {
+    db.exec('ALTER TABLE containers ADD COLUMN image_url TEXT');
+  }
+} catch (e) {
+  console.error("Migration warning:", e.message);
+}
+
+// 3. Sections Table
 db.exec(`
   CREATE TABLE IF NOT EXISTS sections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     container_id INTEGER NOT NULL,
-    name TEXT NOT NULL,         -- e.g., "Top Tray"
+    name TEXT NOT NULL,
     config_type TEXT DEFAULT 'grid',
     rows INTEGER DEFAULT 1,
     cols INTEGER DEFAULT 1,
-    designation_char TEXT,      -- e.g., "A" for first tray, "B" for second
+    designation_char TEXT,
     FOREIGN KEY(container_id) REFERENCES containers(id) ON DELETE CASCADE
   )
 `);
 
-// 4. Components Table (The actual items)
+// 4. Components Table
 db.exec(`
   CREATE TABLE IF NOT EXISTS components (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     section_id INTEGER NOT NULL,
-    grid_position TEXT,         -- e.g., "A-1A"
+    grid_position TEXT,
     name TEXT NOT NULL,
     quantity INTEGER DEFAULT 0,
     specification TEXT,
-    custom_data TEXT,           -- JSON string for extra fields
+    custom_data TEXT,
     image_url TEXT,
     purchase_link TEXT,
     low_stock_threshold INTEGER DEFAULT 0,
@@ -70,7 +80,7 @@ db.exec(`
   )
 `);
 
-// 5. Attachments Table (Datasheets, extra images)
+// 5. Attachments Table
 db.exec(`
   CREATE TABLE IF NOT EXISTS attachments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

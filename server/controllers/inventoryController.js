@@ -27,9 +27,23 @@ exports.getContainerById = (req, res) => {
 };
 
 exports.createContainer = (req, res) => {
-  const { name, description, config } = req.body;
+  const { name, description } = req.body;
+  
+  // Parse config from string if coming from FormData
+  let config = [];
   try {
-    const containerResult = Container.createContainer(name, description);
+    config = JSON.parse(req.body.config || '[]');
+  } catch (e) {
+    console.error("Config parsing error", e);
+  }
+
+  // Handle Image
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
+
+  try {
+    // Insert with image
+    const stmt = db.prepare('INSERT INTO containers (name, description, image_url) VALUES (?, ?, ?)');
+    const containerResult = stmt.run(name, description, imageUrl);
     const containerId = containerResult.lastInsertRowid;
 
     if (config && Array.isArray(config)) {
@@ -52,13 +66,32 @@ exports.createContainer = (req, res) => {
 };
 
 exports.updateContainer = (req, res) => {
-  const { name, description, config } = req.body;
+  const { name, description } = req.body;
   const { id } = req.params;
+
+  let config = [];
+  try {
+    config = JSON.parse(req.body.config || '[]');
+  } catch (e) {
+    console.error("Config parsing error", e);
+  }
   
   try {
-    const stmt = db.prepare('UPDATE containers SET name = ?, description = ? WHERE id = ?');
-    stmt.run(name, description, id);
+    // Handle Image Update
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = `/uploads/${req.file.filename}`;
+    }
 
+    // Get current image to preserve if no new one
+    const current = db.prepare('SELECT image_url FROM containers WHERE id = ?').get(id);
+    const finalImage = imageUrl || (current ? current.image_url : '');
+
+    // Update basic info
+    const stmt = db.prepare('UPDATE containers SET name = ?, description = ?, image_url = ? WHERE id = ?');
+    stmt.run(name, description, finalImage, id);
+
+    // Handle Sections
     if (config && Array.isArray(config)) {
       config.forEach((section) => {
         if (section.id) {
@@ -222,7 +255,6 @@ exports.deleteComponent = (req, res) => {
 
 exports.deleteAttachment = (req, res) => {
   try {
-    // Ideally delete actual file here too
     const stmt = db.prepare('DELETE FROM attachments WHERE id = ?');
     const result = stmt.run(req.params.id);
     if (result.changes > 0) {

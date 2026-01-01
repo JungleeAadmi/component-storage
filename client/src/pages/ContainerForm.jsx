@@ -1,22 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Box, Save, ArrowLeft, Minus } from 'lucide-react';
+import { Plus, Trash2, Box, Save, ArrowLeft, Minus, Camera, X } from 'lucide-react';
 import api from '../services/api';
+import CameraCapture from '../components/CameraCapture';
 
 const ContainerForm = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); // If present, we are editing
+  const { id } = useParams();
   const [loading, setLoading] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [image, setImage] = useState(null); // File object
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [existingImageUrl, setExistingImageUrl] = useState('');
+
   const [sections, setSections] = useState([
     { name: 'Tray 1', rows: 6, cols: 5 }
   ]);
 
-  // Load data if editing
   useEffect(() => {
     if (id) {
       setIsEditMode(true);
@@ -24,10 +29,11 @@ const ContainerForm = () => {
         .then(({ data }) => {
           setName(data.name);
           setDescription(data.description || '');
-          // Map existing sections
+          setExistingImageUrl(data.image_url || '');
+          
           if (data.sections && data.sections.length > 0) {
             setSections(data.sections.map(s => ({
-              id: s.id, // Keep ID for update logic
+              id: s.id, 
               name: s.name,
               rows: s.rows,
               cols: s.cols
@@ -38,19 +44,26 @@ const ContainerForm = () => {
     }
   }, [id]);
 
+  const handleCapture = (file) => {
+    setImage(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setShowCamera(false);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
   const addSection = () => {
     const nextNum = sections.length + 1;
     setSections([...sections, { name: `Tray ${nextNum}`, rows: 6, cols: 5 }]);
   };
 
   const removeSection = (index) => {
-    // If editing, preventing deletion of existing sections is safer for v1, 
-    // but user asked for edit capability. 
-    // For now, we allow UI removal. Backend might ignore deletion if not explicitly handled, 
-    // but in this simple implementation, we just send back the list we want.
-    // Note: The backend update logic currently only updates names or adds new. 
-    // Deleting sections via edit form is complex (orphan items). 
-    // UI will allow removing ONLY new unsaved sections for safety.
     if (isEditMode && sections[index].id) {
       alert("Cannot delete existing trays in this version to prevent data loss.");
       return;
@@ -74,11 +87,21 @@ const ContainerForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('description', description);
+    formData.append('config', JSON.stringify(sections));
+    
+    if (image) {
+      formData.append('image', image);
+    }
+
     try {
       if (isEditMode) {
-        await api.put(`/inventory/containers/${id}`, { name, description, config: sections });
+        await api.put(`/inventory/containers/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       } else {
-        await api.post('/inventory/containers', { name, description, config: sections });
+        await api.post('/inventory/containers', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       }
       navigate('/'); 
     } catch (error) {
@@ -89,8 +112,17 @@ const ContainerForm = () => {
     }
   };
 
+  const displayImage = previewUrl || existingImageUrl;
+
   return (
     <div className="max-w-2xl mx-auto pb-20">
+      {showCamera && (
+        <CameraCapture 
+          onCapture={handleCapture} 
+          onClose={() => setShowCamera(false)} 
+        />
+      )}
+
       <div className="flex items-center space-x-4 mb-8">
         <button onClick={() => navigate(-1)} className="p-2 bg-dark-800 rounded-lg hover:bg-dark-700 text-gray-400 hover:text-white">
           <ArrowLeft size={20} />
@@ -99,13 +131,42 @@ const ContainerForm = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* Image Upload Section */}
+        <div className="flex flex-col items-center justify-center space-y-4 bg-dark-800 p-6 rounded-2xl border border-dark-700">
+          <div className="w-full h-48 bg-dark-900 rounded-xl border border-dark-700 overflow-hidden flex items-center justify-center relative">
+            {displayImage ? (
+              <img src={displayImage} className="w-full h-full object-cover" />
+            ) : (
+              <div className="flex flex-col items-center text-gray-600">
+                <Box size={48} className="mb-2 opacity-50" />
+                <span className="text-xs">No Storage Image</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex space-x-3 w-full justify-center">
+            <button 
+              type="button"
+              onClick={() => setShowCamera(true)}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg flex items-center space-x-2 text-sm"
+            >
+              <Camera size={16} /> <span>Camera</span>
+            </button>
+            <label className="px-4 py-2 bg-dark-900 text-gray-300 rounded-lg border border-dark-700 flex items-center space-x-2 text-sm cursor-pointer hover:bg-dark-700">
+              <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+              <span>Upload Photo</span>
+            </label>
+          </div>
+        </div>
+
         <div className="bg-dark-800 p-6 rounded-2xl border border-dark-700 space-y-4">
           <h2 className="text-lg font-semibold text-white flex items-center space-x-2">
             <Box size={20} className="text-primary-500" />
             <span>Details</span>
           </h2>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Name</label>
+            <label className="block text-sm text-gray-400 mb-1">Name (e.g. Red Cabinet)</label>
             <input 
               required
               type="text" 
@@ -146,7 +207,7 @@ const ContainerForm = () => {
                 exit={{ opacity: 0 }}
                 className="bg-dark-800 p-5 rounded-2xl border border-dark-700 relative group"
               >
-                {/* Delete Button (Only for new sections in edit mode, or any in create mode) */}
+                {/* Delete Button */}
                 {(!isEditMode || !section.id) && sections.length > 1 && (
                   <button 
                     type="button"
@@ -177,7 +238,7 @@ const ContainerForm = () => {
                         <div className="flex items-center space-x-2">
                             <button 
                                 type="button"
-                                disabled={isEditMode && section.id} // Disable changing grid size of existing trays
+                                disabled={isEditMode && section.id}
                                 onClick={() => handleStepper(index, field, -1)}
                                 className="p-2 bg-dark-900 rounded-lg text-gray-400 hover:text-white disabled:opacity-30"
                             >
