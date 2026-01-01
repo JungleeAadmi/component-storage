@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { Camera, Save, ArrowLeft, Link as LinkIcon, Edit2, X, ZoomIn, Paperclip, FileText, Trash2 } from 'lucide-react';
+import { Camera, Save, ArrowLeft, Link as LinkIcon, Edit2, X, ZoomIn, Paperclip, FileText, Trash2, Plus, Minus } from 'lucide-react';
 import api from '../services/api';
 import CameraCapture from '../components/CameraCapture';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,10 +26,13 @@ const ComponentDetail = () => {
     quantity: 1,
     specification: '',
     purchase_link: '',
-    custom_data: '',
+    custom_data: '', // Notes
     image: null,
     attachments: []
   });
+
+  // Dynamic Sub-items State
+  const [subItems, setSubItems] = useState([]);
   
   const [previewUrl, setPreviewUrl] = useState('');
   const [existingImageUrl, setExistingImageUrl] = useState('');
@@ -48,6 +51,10 @@ const ComponentDetail = () => {
                 image: null,
                 attachments: []
             });
+            // Load sub-items from custom_data
+            if (data.custom_data?.subItems && Array.isArray(data.custom_data.subItems)) {
+                setSubItems(data.custom_data.subItems);
+            }
             setExistingImageUrl(data.image_url);
             setExistingAttachments(data.attachments || []);
         })
@@ -74,6 +81,21 @@ const ComponentDetail = () => {
     }
   };
 
+  // Sub-item handlers
+  const addSubItem = () => {
+    setSubItems([...subItems, { name: '', qty: 1 }]);
+  };
+
+  const removeSubItem = (index) => {
+    setSubItems(subItems.filter((_, i) => i !== index));
+  };
+
+  const updateSubItem = (index, field, value) => {
+    const newItems = [...subItems];
+    newItems[index][field] = value;
+    setSubItems(newItems);
+  };
+
   const deleteExistingAttachment = async (attachmentId) => {
     if(!window.confirm("Remove this attachment?")) return;
     try {
@@ -96,7 +118,12 @@ const ComponentDetail = () => {
     data.append('quantity', formData.quantity);
     data.append('specification', formData.specification);
     data.append('purchase_link', formData.purchase_link);
-    data.append('custom_data', JSON.stringify({ notes: formData.custom_data }));
+    
+    // Combine notes and subItems into custom_data JSON
+    data.append('custom_data', JSON.stringify({ 
+        notes: formData.custom_data,
+        subItems: subItems
+    }));
     
     if (formData.image) data.append('image', formData.image);
     
@@ -139,7 +166,6 @@ const ComponentDetail = () => {
         />
       )}
 
-      {/* PDF Viewer Modal */}
       <AnimatePresence>
         {pdfUrl && (
              <motion.div 
@@ -153,7 +179,6 @@ const ComponentDetail = () => {
                             <X size={24} />
                         </button>
                     </div>
-                    {/* Object tag works better for PDFs on some browsers */}
                     <object data={pdfUrl} type="application/pdf" className="w-full h-full flex-1">
                         <p className="text-white text-center mt-10">
                             PDF Viewer not supported. <a href={pdfUrl} target="_blank" className="text-primary-500 underline">Download Here</a>
@@ -199,6 +224,7 @@ const ComponentDetail = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Main Image */}
         <div className="flex flex-col items-center justify-center space-y-4">
           <div 
             className="w-full aspect-video bg-dark-800 rounded-2xl border border-dark-700 overflow-hidden flex items-center justify-center relative group"
@@ -278,6 +304,54 @@ const ComponentDetail = () => {
             )}
           </div>
 
+          {/* Sub-Items / Contents Section */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm text-gray-400">Contents / Sub-items</label>
+                {isEditing && (
+                    <button type="button" onClick={addSubItem} className="text-xs flex items-center text-primary-400 hover:text-white">
+                        <Plus size={14} className="mr-1" /> Add Item
+                    </button>
+                )}
+            </div>
+            
+            <div className="space-y-2">
+                {subItems.length === 0 && !isEditing && <p className="text-xs text-gray-600 italic">No sub-items listed.</p>}
+                
+                {subItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                        {isEditing ? (
+                            <>
+                                <input 
+                                    type="text" 
+                                    placeholder="Item Name"
+                                    className="flex-1 bg-dark-900 border border-dark-700 rounded-lg p-2 text-sm text-white"
+                                    value={item.name}
+                                    onChange={(e) => updateSubItem(idx, 'name', e.target.value)}
+                                />
+                                <input 
+                                    type="number" 
+                                    placeholder="Qty"
+                                    className="w-20 bg-dark-900 border border-dark-700 rounded-lg p-2 text-sm text-white text-center"
+                                    value={item.qty}
+                                    onChange={(e) => updateSubItem(idx, 'qty', e.target.value)}
+                                />
+                                <button type="button" onClick={() => removeSubItem(idx)} className="p-2 text-red-500 hover:bg-dark-800 rounded">
+                                    <Trash2 size={16} />
+                                </button>
+                            </>
+                        ) : (
+                            <div className="w-full flex justify-between items-center p-2 bg-dark-800 rounded border border-dark-700">
+                                <span className="text-sm text-gray-300">{item.name}</span>
+                                <span className="text-xs font-mono text-primary-400">x{item.qty}</span>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Attachments Section */}
           <div>
             <label className="block text-sm text-gray-400 mb-2">Attachments</label>
             

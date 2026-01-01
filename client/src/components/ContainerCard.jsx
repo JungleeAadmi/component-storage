@@ -1,9 +1,49 @@
 import { useNavigate } from 'react-router-dom';
-import { Box, Layers, Trash2, Edit2 } from 'lucide-react';
+import { Trash2, Edit2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useLongPress from '../hooks/useLongPress';
 import { useState } from 'react';
 import api from '../services/api';
+
+const ContainerVisualizer = ({ sections }) => {
+  if (!sections || sections.length === 0) {
+    return <div className="w-full h-full bg-dark-800 rounded flex items-center justify-center text-[8px] text-gray-600">Empty</div>;
+  }
+
+  // Calculate total rows to distribute height proportionally
+  const totalRows = sections.reduce((acc, s) => acc + (s.rows || 1), 0);
+
+  return (
+    <div className="w-full h-full flex flex-col gap-[2px] p-[4px]">
+      {sections.map((section, idx) => {
+        // Calculate relative height percentage, min 10%
+        const heightPercent = Math.max((section.rows / totalRows) * 100, 10);
+        
+        return (
+          <div 
+            key={idx} 
+            className="w-full border border-primary-500/30 bg-primary-900/10 rounded-[2px] overflow-hidden flex flex-col"
+            style={{ height: `${heightPercent}%` }}
+          >
+            {/* Mini Grid Representation */}
+            <div 
+                className="w-full h-full grid gap-[1px] content-stretch"
+                style={{ 
+                    gridTemplateColumns: `repeat(${Math.min(section.cols, 8)}, 1fr)`, // Cap cols at 8 for visual sanity
+                    gridTemplateRows: `repeat(${Math.min(section.rows, 8)}, 1fr)` 
+                }}
+            >
+                {/* Render only enough cells to fill the visual, capped at 20 to prevent DOM overload */}
+                {Array.from({ length: Math.min(section.rows * section.cols, 20) }).map((_, i) => (
+                    <div key={i} className="bg-primary-500/20 rounded-[1px]"></div>
+                ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const ContainerCard = ({ container, onUpdate }) => {
   const navigate = useNavigate();
@@ -23,11 +63,9 @@ const ContainerCard = ({ container, onUpdate }) => {
     setShowMenu(true);
   };
 
-  // Bind hook to the inner card content ONLY
   const bind = useLongPress(handleLongPress, handleClick, { shouldPreventDefault: true });
 
   const handleDelete = async (e) => {
-    // e.stopPropagation is redundant if we are outside, but good practice
     if (window.confirm(`Delete container "${container.name}" and all contents?`)) {
       try {
         await api.delete(`/inventory/containers/${container.id}`);
@@ -46,34 +84,28 @@ const ContainerCard = ({ container, onUpdate }) => {
   };
 
   return (
-    <div className="relative group select-none">
-      {/* The Clickable Card Content */}
+    <div className="relative group select-none h-full">
       <motion.div 
         {...bind}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="bg-dark-800 p-5 rounded-2xl border border-dark-700 hover:border-primary-500/50 hover:shadow-lg hover:shadow-primary-500/10 transition-all cursor-pointer h-full"
+        className="bg-dark-800 p-4 rounded-2xl border border-dark-700 hover:border-primary-500/50 hover:shadow-lg hover:shadow-primary-500/10 transition-all cursor-pointer h-full flex flex-col items-center"
       >
-        <div className="flex flex-col items-center text-center space-y-3">
-          <div className="w-16 h-16 bg-dark-900 rounded-full flex items-center justify-center group-hover:bg-primary-600/10 transition-colors">
-            <Box size={32} className="text-gray-400 group-hover:text-primary-500 transition-colors" />
-          </div>
-          
-          <div>
-            <h3 className="text-white font-semibold text-lg truncate w-full max-w-[150px]">
-              {container.name || 'Untitled'}
-            </h3>
-            <div className="flex items-center justify-center space-x-1 text-xs text-gray-500 mt-1">
-              <Layers size={12} />
-              <span>
-                  {container.sections ? container.sections.length : 0} Sections
-              </span>
-            </div>
-          </div>
+        {/* Dynamic Icon Container */}
+        <div className="w-16 h-16 mb-3 bg-dark-900 rounded-lg border border-dark-600 overflow-hidden shadow-inner">
+             <ContainerVisualizer sections={container.sections} />
+        </div>
+        
+        {/* Text Info */}
+        <div className="text-center w-full">
+          <h3 className="text-white font-semibold text-sm sm:text-base truncate w-full px-1">
+            {container.name || 'Untitled'}
+          </h3>
+          {/* Section count removed as requested */}
         </div>
       </motion.div>
 
-      {/* The Menu Overlay - Sibling to the card, so clicks don't bubble to 'bind' */}
+      {/* Menu Overlay */}
       <AnimatePresence>
         {showMenu && (
           <motion.div 
