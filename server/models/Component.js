@@ -17,6 +17,8 @@ module.exports = {
 
   // Universal Search
   search: (query) => {
+    // We use EXISTS to check if any attachment associated with the component matches the query
+    // This prevents duplicate rows if a component has multiple matching attachments
     const sql = `
       SELECT c.*, s.name as section_name, con.name as container_name 
       FROM components c
@@ -25,8 +27,16 @@ module.exports = {
       WHERE c.name LIKE ? 
          OR c.specification LIKE ? 
          OR c.custom_data LIKE ?
+         OR EXISTS (
+            SELECT 1 
+            FROM attachments a 
+            WHERE a.component_id = c.id 
+            AND a.file_path LIKE ?
+         )
     `;
-    // Bind the query parameter to Name, Specification, and Custom Data (Sub-items/Notes)
-    return db.prepare(sql).all(`%${query}%`, `%${query}%`, `%${query}%`);
+    
+    const term = `%${query}%`;
+    // Pass the search term 4 times: for Name, Spec, Custom Data, and Attachment Path
+    return db.prepare(sql).all(term, term, term, term);
   }
 };
