@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { Camera, Save, ArrowLeft, Link as LinkIcon, Edit2, X, ZoomIn, Paperclip, FileText, Trash2, Plus, Minus } from 'lucide-react';
+import { Camera, Save, ArrowLeft, Link as LinkIcon, Edit2, X, ZoomIn, ZoomOut, Maximize, Paperclip, FileText, Trash2, Plus, Minus } from 'lucide-react';
 import api from '../services/api';
 import CameraCapture from '../components/CameraCapture';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -21,17 +21,23 @@ const ComponentDetail = () => {
   const [showImageZoom, setShowImageZoom] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
   
+  // PDF Zoom State
+  const [pdfScale, setPdfScale] = useState(1);
+  const pdfWrapperRef = useRef(null);
+  const lastTapRef = useRef(0);
+  const initialPinchDistRef = useRef(null);
+  const initialScaleRef = useRef(1);
+
   const [formData, setFormData] = useState({
     name: '',
     quantity: 1,
     specification: '',
     purchase_link: '',
-    custom_data: '', // Notes
+    custom_data: '', 
     image: null,
     attachments: []
   });
 
-  // Dynamic Sub-items State
   const [subItems, setSubItems] = useState([]);
   
   const [previewUrl, setPreviewUrl] = useState('');
@@ -51,7 +57,6 @@ const ComponentDetail = () => {
                 image: null,
                 attachments: []
             });
-            // Load sub-items from custom_data
             if (data.custom_data?.subItems && Array.isArray(data.custom_data.subItems)) {
                 setSubItems(data.custom_data.subItems);
             }
@@ -81,7 +86,6 @@ const ComponentDetail = () => {
     }
   };
 
-  // Sub-item handlers
   const addSubItem = () => {
     setSubItems([...subItems, { name: '', qty: 1 }]);
   };
@@ -118,8 +122,6 @@ const ComponentDetail = () => {
     data.append('quantity', formData.quantity);
     data.append('specification', formData.specification);
     data.append('purchase_link', formData.purchase_link);
-    
-    // Combine notes and subItems into custom_data JSON
     data.append('custom_data', JSON.stringify({ 
         notes: formData.custom_data,
         subItems: subItems
@@ -152,9 +154,55 @@ const ComponentDetail = () => {
   const openAttachment = (url, type) => {
     if (type === 'application/pdf') {
         setPdfUrl(url);
+        setPdfScale(1); // Reset zoom on open
     } else {
         window.open(url, '_blank');
     }
+  };
+
+  // --- PDF Gesture Handlers ---
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      // Pinch started
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const dist = Math.hypot(touch1.pageX - touch2.pageX, touch1.pageY - touch2.pageY);
+      initialPinchDistRef.current = dist;
+      initialScaleRef.current = pdfScale;
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2 && initialPinchDistRef.current) {
+      // Pinch moving
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const dist = Math.hypot(touch1.pageX - touch2.pageX, touch1.pageY - touch2.pageY);
+      
+      const ratio = dist / initialPinchDistRef.current;
+      const newScale = Math.min(Math.max(initialScaleRef.current * ratio, 1), 4); // Limit zoom 1x to 4x
+      setPdfScale(newScale);
+      e.preventDefault(); // Prevent default browser zoom
+    }
+  };
+
+  const handleDoubleTap = (e) => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // Double tap detected
+      if (pdfScale > 1.2) {
+        setPdfScale(1); // Reset to fit
+      } else {
+        setPdfScale(2.5); // Zoom in
+      }
+    }
+    lastTapRef.current = now;
+  };
+
+  const handleZoom = (delta) => {
+    setPdfScale(prev => Math.min(Math.max(prev + delta, 1), 4));
   };
 
   return (
@@ -166,24 +214,56 @@ const ComponentDetail = () => {
         />
       )}
 
+      {/* PDF Viewer Modal with Zoom Support */}
       <AnimatePresence>
         {pdfUrl && (
              <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[80] bg-black/95 flex flex-col items-center justify-center p-2"
+                className="fixed inset-0 z-[80] bg-black/95 flex flex-col items-center justify-center p-0 sm:p-4 overflow-hidden"
              >
-                <div className="w-full h-full max-w-5xl flex flex-col bg-dark-800 rounded-lg overflow-hidden">
-                    <div className="flex justify-between items-center p-3 border-b border-dark-700">
+                <div className="w-full h-full max-w-5xl flex flex-col bg-dark-800 rounded-none sm:rounded-lg overflow-hidden relative">
+                    {/* Header */}
+                    <div className="flex justify-between items-center p-3 border-b border-dark-700 bg-dark-900 z-10">
                         <span className="text-white font-bold ml-2">Document</span>
-                        <button onClick={() => setPdfUrl(null)} className="text-white p-2 hover:bg-dark-700 rounded-lg">
-                            <X size={24} />
-                        </button>
+                        <div className="flex items-center space-x-4">
+                            {/* Zoom Controls */}
+                            <button onClick={() => handleZoom(-0.5)} className="text-gray-300 hover:text-white p-1"><ZoomOut size={20}/></button>
+                            <span className="text-xs text-gray-400 font-mono w-8 text-center">{Math.round(pdfScale * 100)}%</span>
+                            <button onClick={() => handleZoom(0.5)} className="text-gray-300 hover:text-white p-1"><ZoomIn size={20}/></button>
+                            <button onClick={() => setPdfScale(1)} className="text-gray-300 hover:text-white p-1 mr-4"><Maximize size={20}/></button>
+                            
+                            <button onClick={() => setPdfUrl(null)} className="text-white p-2 hover:bg-dark-700 rounded-lg border border-dark-600">
+                                <X size={20} />
+                            </button>
+                        </div>
                     </div>
-                    <object data={pdfUrl} type="application/pdf" className="w-full h-full flex-1">
-                        <p className="text-white text-center mt-10">
-                            PDF Viewer not supported. <a href={pdfUrl} target="_blank" className="text-primary-500 underline">Download Here</a>
-                        </p>
-                    </object>
+                    
+                    {/* Scrollable Container */}
+                    <div 
+                        className="flex-1 overflow-auto bg-dark-900 w-full h-full touch-pan-x touch-pan-y relative"
+                        ref={pdfWrapperRef}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onClick={handleDoubleTap}
+                    >
+                        <div 
+                            style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                transform: `scale(${pdfScale})`, 
+                                transformOrigin: 'top left',
+                                transition: 'transform 0.1s ease-out'
+                            }}
+                        >
+                            {/* Using object for PDF display */}
+                            <object data={pdfUrl} type="application/pdf" className="w-full h-full block">
+                                <p className="text-white text-center mt-10 p-4">
+                                    Preview not supported. 
+                                    <a href={pdfUrl} target="_blank" className="text-primary-500 underline ml-2">Download File</a>
+                                </p>
+                            </object>
+                        </div>
+                    </div>
                 </div>
              </motion.div>
         )}
@@ -304,7 +384,7 @@ const ComponentDetail = () => {
             )}
           </div>
 
-          {/* Sub-Items / Contents Section */}
+          {/* Sub-Items Section */}
           <div>
             <div className="flex justify-between items-center mb-2">
                 <label className="block text-sm text-gray-400">Contents / Sub-items</label>
