@@ -25,13 +25,6 @@ const Dashboard = () => {
     fetchContainers();
   }, []);
 
-  const handleSearch = (e) => {
-    const val = e.target.value;
-    if (val) {
-        navigate(`/search?q=${val}`);
-    }
-  };
-
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -49,11 +42,13 @@ const Dashboard = () => {
         <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
             <Search size={20} />
         </div>
+        {/* FIX: Redirect to search page immediately on focus/click so typing happens there */}
         <input 
           type="text" 
           placeholder="Search components..." 
           className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-12 p-4 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-sm placeholder-gray-500"
-          onChange={handleSearch}
+          onFocus={() => navigate('/search')}
+          readOnly
         />
       </div>
 

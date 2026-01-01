@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { Camera, Save, ArrowLeft, Link as LinkIcon, Edit2, X, ZoomIn, Paperclip, FileText } from 'lucide-react';
+import { Camera, Save, ArrowLeft, Link as LinkIcon, Edit2, X, ZoomIn, Paperclip, FileText, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import CameraCapture from '../components/CameraCapture';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,7 +18,6 @@ const ComponentDetail = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [isEditing, setIsEditing] = useState(!id || isEditModeParam);
   
-  // Viewer States
   const [showImageZoom, setShowImageZoom] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
   
@@ -29,7 +28,7 @@ const ComponentDetail = () => {
     purchase_link: '',
     custom_data: '',
     image: null,
-    attachments: [] // New files to upload
+    attachments: []
   });
   
   const [previewUrl, setPreviewUrl] = useState('');
@@ -75,6 +74,16 @@ const ComponentDetail = () => {
     }
   };
 
+  const deleteExistingAttachment = async (attachmentId) => {
+    if(!window.confirm("Remove this attachment?")) return;
+    try {
+        await api.delete(`/inventory/attachments/${attachmentId}`);
+        setExistingAttachments(prev => prev.filter(a => a.id !== attachmentId));
+    } catch(err) {
+        alert("Failed to delete attachment");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -91,7 +100,6 @@ const ComponentDetail = () => {
     
     if (formData.image) data.append('image', formData.image);
     
-    // Append attachments
     formData.attachments.forEach(file => {
         data.append('attachments', file);
     });
@@ -99,7 +107,6 @@ const ComponentDetail = () => {
     try {
       if (id) {
         await api.put(`/inventory/components/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
-        // Refresh to see new attachments
         window.location.reload(); 
       } else {
         await api.post('/inventory/components', data, { headers: { 'Content-Type': 'multipart/form-data' } });
@@ -125,7 +132,6 @@ const ComponentDetail = () => {
 
   return (
     <div className="max-w-xl mx-auto pb-20">
-      {/* Camera Modal */}
       {showCamera && (
         <CameraCapture 
           onCapture={handleCapture} 
@@ -138,22 +144,26 @@ const ComponentDetail = () => {
         {pdfUrl && (
              <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[80] bg-black/90 flex flex-col items-center justify-center p-4"
+                className="fixed inset-0 z-[80] bg-black/95 flex flex-col items-center justify-center p-2"
              >
-                <div className="w-full max-w-4xl h-full bg-white rounded-xl overflow-hidden relative flex flex-col">
-                    <div className="bg-dark-800 p-2 flex justify-between items-center">
-                        <span className="text-white font-bold ml-2">Document Viewer</span>
+                <div className="w-full h-full max-w-5xl flex flex-col bg-dark-800 rounded-lg overflow-hidden">
+                    <div className="flex justify-between items-center p-3 border-b border-dark-700">
+                        <span className="text-white font-bold ml-2">Document</span>
                         <button onClick={() => setPdfUrl(null)} className="text-white p-2 hover:bg-dark-700 rounded-lg">
                             <X size={24} />
                         </button>
                     </div>
-                    <iframe src={pdfUrl} className="flex-1 w-full h-full" title="PDF Viewer"></iframe>
+                    {/* Object tag works better for PDFs on some browsers */}
+                    <object data={pdfUrl} type="application/pdf" className="w-full h-full flex-1">
+                        <p className="text-white text-center mt-10">
+                            PDF Viewer not supported. <a href={pdfUrl} target="_blank" className="text-primary-500 underline">Download Here</a>
+                        </p>
+                    </object>
                 </div>
              </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Image Zoom Modal */}
       <AnimatePresence>
         {showImageZoom && displayImage && (
             <motion.div 
@@ -169,7 +179,6 @@ const ComponentDetail = () => {
         )}
       </AnimatePresence>
 
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
             <button onClick={() => navigate(-1)} className="p-2 bg-dark-800 rounded-lg hover:text-white text-gray-400">
@@ -190,7 +199,6 @@ const ComponentDetail = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Main Image */}
         <div className="flex flex-col items-center justify-center space-y-4">
           <div 
             className="w-full aspect-video bg-dark-800 rounded-2xl border border-dark-700 overflow-hidden flex items-center justify-center relative group"
@@ -225,7 +233,6 @@ const ComponentDetail = () => {
           )}
         </div>
 
-        {/* Fields */}
         <div className="space-y-4">
           <div>
             <label className="block text-sm text-gray-400 mb-1">Name</label>
@@ -271,22 +278,26 @@ const ComponentDetail = () => {
             )}
           </div>
 
-          {/* Attachments Section */}
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Attachments (Datasheets, etc)</label>
+            <label className="block text-sm text-gray-400 mb-2">Attachments</label>
             
             <div className="space-y-2 mb-3">
-                {/* Existing Attachments */}
                 {existingAttachments.map(att => (
-                    <div key={att.id} onClick={() => openAttachment(att.file_path, att.file_type)} className="flex items-center space-x-3 p-3 bg-dark-800 rounded-lg cursor-pointer hover:bg-dark-700">
-                        <FileText size={20} className="text-primary-400" />
-                        <span className="text-sm text-white truncate flex-1">
-                            {att.file_path.split('/').pop()}
-                        </span>
+                    <div key={att.id} className="flex items-center space-x-3 p-3 bg-dark-800 rounded-lg border border-dark-700">
+                        <div onClick={() => openAttachment(att.file_path, att.file_type)} className="flex-1 flex items-center space-x-3 cursor-pointer">
+                            <FileText size={20} className="text-primary-400" />
+                            <span className="text-sm text-white truncate">
+                                {att.file_path.split('/').pop()}
+                            </span>
+                        </div>
+                        {isEditing && (
+                            <button type="button" onClick={() => deleteExistingAttachment(att.id)} className="text-red-500 p-2 hover:bg-dark-900 rounded-lg">
+                                <Trash2 size={16} />
+                            </button>
+                        )}
                     </div>
                 ))}
                 
-                {/* Pending Uploads */}
                 {formData.attachments.map((file, idx) => (
                     <div key={idx} className="flex items-center space-x-3 p-3 bg-dark-800/50 border border-dashed border-dark-600 rounded-lg">
                         <Paperclip size={20} className="text-gray-500" />

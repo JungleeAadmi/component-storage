@@ -56,27 +56,17 @@ exports.updateContainer = (req, res) => {
   const { id } = req.params;
   
   try {
-    // Update basic info
     const stmt = db.prepare('UPDATE containers SET name = ?, description = ? WHERE id = ?');
     stmt.run(name, description, id);
 
-    // Handle Sections (Add new ones, Update existing names)
-    // NOTE: Changing rows/cols of existing sections is dangerous for existing items. 
-    // We will allow adding new sections or renaming.
     if (config && Array.isArray(config)) {
       config.forEach((section) => {
         if (section.id) {
-          // Update existing
-          // We only update name to be safe. Updating grid size requires complex logic not safely handled in one go.
           const updateSec = db.prepare('UPDATE sections SET name = ? WHERE id = ?');
           updateSec.run(section.name, section.id);
         } else {
-          // Add new
-          // Determine next char? 
-          // Simple approach: get count
           const count = db.prepare('SELECT COUNT(*) as c FROM sections WHERE container_id = ?').get(id).c;
-          const char = String.fromCharCode(65 + count); // logic might need improvement for mixed updates but works for appending
-          
+          const char = String.fromCharCode(65 + count);
           Container.createSection({
             container_id: id,
             name: section.name,
@@ -142,11 +132,8 @@ exports.getComponentById = (req, res) => {
     const component = stmt.get(req.params.id);
     if (component) {
         try { component.custom_data = JSON.parse(component.custom_data); } catch(e) {}
-        
-        // Fetch attachments
         const attachments = db.prepare('SELECT * FROM attachments WHERE component_id = ?').all(req.params.id);
         component.attachments = attachments;
-        
         res.json(component);
     } else {
         res.status(404).json({ message: 'Component not found' });
@@ -158,8 +145,6 @@ exports.getComponentById = (req, res) => {
 
 exports.addComponent = (req, res) => {
   const { section_id, grid_position, name, quantity, specification, purchase_link, custom_data } = req.body;
-  
-  // Handle main image
   const mainImage = req.files['image'] ? `/uploads/${req.files['image'][0].filename}` : '';
 
   try {
@@ -176,7 +161,6 @@ exports.addComponent = (req, res) => {
     
     const componentId = result.lastInsertRowid;
 
-    // Handle Attachments
     if (req.files['attachments']) {
       const insertAttach = db.prepare('INSERT INTO attachments (component_id, file_path, file_type) VALUES (?, ?, ?)');
       req.files['attachments'].forEach(file => {
@@ -213,7 +197,6 @@ exports.updateComponent = (req, res) => {
     
     stmt.run(name, quantity, specification, purchase_link, custom_data, finalImage, id);
 
-    // Handle New Attachments
     if (req.files['attachments']) {
       const insertAttach = db.prepare('INSERT INTO attachments (component_id, file_path, file_type) VALUES (?, ?, ?)');
       req.files['attachments'].forEach(file => {
@@ -232,6 +215,21 @@ exports.deleteComponent = (req, res) => {
     const stmt = db.prepare('DELETE FROM components WHERE id = ?');
     stmt.run(req.params.id);
     res.json({ message: 'Component deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.deleteAttachment = (req, res) => {
+  try {
+    // Ideally delete actual file here too
+    const stmt = db.prepare('DELETE FROM attachments WHERE id = ?');
+    const result = stmt.run(req.params.id);
+    if (result.changes > 0) {
+      res.json({ message: 'Attachment deleted' });
+    } else {
+      res.status(404).json({ message: 'Attachment not found' });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -13,9 +13,14 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-3 group">
-            {/* Logo Image */}
-            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-primary-600/20 group-hover:scale-105 transition-transform">
-                 <img src="/favicon-32x32.png" alt="I" className="w-full h-full object-cover" onError={(e) => {e.target.style.display='none'; e.target.parentElement.classList.add('bg-primary-600'); e.target.parentElement.innerHTML='<span class="text-white font-bold flex items-center justify-center h-full">I</span>'}} />
+            {/* Logo Image - Using high res 192x192 */}
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-primary-600/20 group-hover:scale-105 transition-transform bg-primary-600">
+                 <img 
+                    src="/android-chrome-192x192.png" 
+                    alt="I" 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {e.target.style.display='none';}} 
+                 />
             </div>
             <div className="flex flex-col">
               <span className="text-lg font-bold text-white leading-tight tracking-tight">Inventra</span>

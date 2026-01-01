@@ -7,23 +7,24 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Setting Varela Round as the default sans font
         sans: ['"Varela Round"', 'sans-serif'],
       },
       colors: {
-        // Custom Dark Professional Theme
+        // Pitch Black / OLED Theme
         dark: {
-          900: '#0f172a', // Main background
-          800: '#1e293b', // Card background
-          700: '#334155', // Borders/Hover
+          900: '#000000', // True Black
+          800: '#121212', // Material Dark Gray (Surface)
+          700: '#27272a', // Borders
+          600: '#3f3f46', // Inputs
         },
         primary: {
-          500: '#3b82f6', // Bright Blue for actions
-          600: '#2563eb', // Darker Blue for hover
+          500: '#2563eb', 
+          600: '#1d4ed8', 
+          700: '#1e40af', 
         },
         accent: {
-          500: '#10b981', // Emerald for success/safe
-          600: '#ef4444', // Red for danger/delete
+          500: '#10b981', 
+          600: '#dc2626', 
         }
       }
     },
