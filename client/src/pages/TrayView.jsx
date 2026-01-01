@@ -13,20 +13,14 @@ const TrayView = () => {
 
   const fetchData = async () => {
     try {
+      // 1. Fetch components
       const compRes = await api.get(`/inventory/sections/${id}/components`);
       setComponents(compRes.data);
 
-      if (!section) {
-        const containersRes = await api.get('/inventory/containers');
-        for (const c of containersRes.data) {
-            const detail = await api.get(`/inventory/containers/${c.id}`);
-            const found = detail.data.sections.find(s => s.id == id);
-            if (found) {
-                setSection(found);
-                break;
-            }
-        }
-      }
+      // 2. Fetch section details DIRECTLY
+      const sectionRes = await api.get(`/inventory/sections/${id}`);
+      setSection(sectionRes.data);
+      
     } catch (error) {
       console.error("Fetch error", error);
     } finally {

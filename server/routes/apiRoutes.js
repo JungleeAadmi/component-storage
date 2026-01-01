@@ -8,6 +8,7 @@ const {
   createContainer, 
   getContainerById,
   deleteContainer,
+  getSectionById, // Imported here
   getComponentsBySection,
   addComponent,
   getComponentById,
@@ -26,13 +27,16 @@ router.route('/containers/:id')
   .get(protect, getContainerById)
   .delete(protect, deleteContainer);
 
+// Section Routes (New)
+router.get('/sections/:id', protect, getSectionById);
+router.get('/sections/:sectionId/components', protect, getComponentsBySection);
+
 // Component Routes
 router.post('/components', protect, upload.single('image'), addComponent);
 router.get('/components/:id', protect, getComponentById);
 router.put('/components/:id', protect, upload.single('image'), updateComponent);
 router.delete('/components/:id', protect, deleteComponent);
 
-router.get('/sections/:sectionId/components', protect, getComponentsBySection);
 
 // Search Route
 router.get('/search', protect, globalSearch);

@@ -9,18 +9,20 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const fetchContainers = async () => {
+    // Note: Don't set loading true on refresh to avoid flickering whole screen
+    try {
+      const { data } = await api.get('/inventory/containers');
+      setContainers(data);
+    } catch (error) {
+      console.error("Failed to fetch containers", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch containers on load
   useEffect(() => {
-    const fetchContainers = async () => {
-      try {
-        const { data } = await api.get('/inventory/containers');
-        setContainers(data);
-      } catch (error) {
-        console.error("Failed to fetch containers", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchContainers();
   }, []);
 
@@ -29,7 +31,6 @@ const Dashboard = () => {
       {/* Top Bar */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">My Storage</h2>
-        {/* FIX: Link IS the button now, avoiding nested button tag issue */}
         <Link 
           to="/add-container" 
           className="bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-xl flex items-center space-x-2 transition-all shadow-lg shadow-primary-600/20 active:scale-95"
@@ -80,7 +81,11 @@ const Dashboard = () => {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {containers.map(container => (
-            <ContainerCard key={container.id} container={container} />
+            <ContainerCard 
+                key={container.id} 
+                container={container} 
+                onUpdate={fetchContainers} 
+            />
           ))}
         </div>
       )}

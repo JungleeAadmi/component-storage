@@ -65,6 +65,22 @@ exports.deleteContainer = (req, res) => {
   }
 };
 
+// --- Sections ---
+
+exports.getSectionById = (req, res) => {
+  try {
+    const stmt = db.prepare('SELECT * FROM sections WHERE id = ?');
+    const section = stmt.get(req.params.id);
+    if (section) {
+      res.json(section);
+    } else {
+      res.status(404).json({ message: 'Section not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // --- Components ---
 
 exports.getComponentsBySection = (req, res) => {
