@@ -14,8 +14,13 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    // Sanitize the original name (replace spaces with underscores) to prevent URL issues
+    const safeName = file.originalname.replace(/\s+/g, '_');
+    
+    // Prepend timestamp to ensure uniqueness while keeping the original name visible
+    const filename = `${Date.now()}-${safeName}`;
+    
+    cb(null, filename);
   }
 });
 
