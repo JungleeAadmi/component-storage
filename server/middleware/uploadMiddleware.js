@@ -15,12 +15,11 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // Sanitize the original name (replace spaces with underscores) to prevent URL issues
+    // We use the original name exactly as requested.
+    // WARNING: Uploading a file with the same name will overwrite the existing one!
     const safeName = file.originalname.replace(/\s+/g, '_');
     
-    // Prepend timestamp to ensure uniqueness while keeping the original name visible
-    const filename = `${Date.now()}-${safeName}`;
-    
-    cb(null, filename);
+    cb(null, safeName);
   }
 });
 
