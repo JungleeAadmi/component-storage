@@ -11,7 +11,10 @@ const Search = () => {
   const [term, setTerm] = useState(query || '');
 
   const handleSearch = async (text) => {
-    if (!text) return;
+    if (!text) {
+        setResults([]);
+        return;
+    }
     setLoading(true);
     try {
       const { data } = await api.get(`/inventory/search?q=${text}`);
@@ -23,15 +26,21 @@ const Search = () => {
     }
   };
 
-  // Auto search if URL has params
   useEffect(() => {
     if (query) {
         handleSearch(query);
     }
   }, [query]);
 
+  // Instant search handler
+  const handleInput = (e) => {
+    const val = e.target.value;
+    setTerm(val);
+    handleSearch(val);
+  };
+
   return (
-    <div>
+    <div className="pb-20">
       <h1 className="text-2xl font-bold text-white mb-6">Search Inventory</h1>
       
       <div className="mb-8 relative">
@@ -41,8 +50,8 @@ const Search = () => {
           placeholder="Type to search..." 
           className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-12 p-4 text-white focus:outline-none focus:border-primary-500"
           value={term}
-          onChange={(e) => setTerm(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch(term)}
+          onChange={handleInput}
+          autoFocus
         />
       </div>
 
@@ -63,14 +72,18 @@ const Search = () => {
                             </div>
                         )}
                     </div>
-                    <div className="flex-1">
-                        <h3 className="text-white font-bold">{item.name}</h3>
-                        <p className="text-xs text-gray-400">
+                    <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-bold truncate">{item.name}</h3>
+                        <p className="text-xs text-gray-400 truncate">
                             {item.container_name} &gt; {item.section_name} &gt; <span className="text-primary-400 font-mono">{item.grid_position}</span>
                         </p>
                     </div>
-                    {/* Link to Tray View, not component edit, so user sees context */}
-                    <Link to={`/tray/${item.section_id}`} className="p-2 bg-dark-700 rounded-lg text-white hover:bg-primary-600">
+                    
+                    {/* Updated Link: Passes highlight param */}
+                    <Link 
+                        to={`/tray/${item.section_id}?highlight=${item.grid_position}`} 
+                        className="p-2 bg-dark-700 rounded-lg text-white hover:bg-primary-600 transition-colors"
+                    >
                         <ArrowRight size={16} />
                     </Link>
                 </div>

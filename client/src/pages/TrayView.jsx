@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import api from '../services/api';
 import GridRenderer from '../components/GridRenderer';
@@ -7,15 +7,22 @@ import GridRenderer from '../components/GridRenderer';
 const TrayView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // Get the grid position to highlight (e.g., "A-1A")
+  const highlightPos = searchParams.get('highlight');
+
   const [section, setSection] = useState(null);
   const [components, setComponents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
+      // 1. Fetch components
       const compRes = await api.get(`/inventory/sections/${id}/components`);
       setComponents(compRes.data);
 
+      // 2. Fetch section details
       const sectionRes = await api.get(`/inventory/sections/${id}`);
       setSection(sectionRes.data);
       
@@ -49,6 +56,7 @@ const TrayView = () => {
         section={section} 
         components={components} 
         onUpdate={fetchData} 
+        highlight={highlightPos} // Pass the highlight prop
       />
     </div>
   );

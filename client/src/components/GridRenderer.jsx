@@ -1,20 +1,29 @@
 import { Package, Plus, Trash2, Edit2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useLongPress from '../hooks/useLongPress';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Separate component to safely handle hooks per cell
-const GridCell = ({ cellId, component, onLongPress, onClick, activeMenu, setActiveMenu, onDelete, onEdit }) => {
+const GridCell = ({ cellId, component, onLongPress, onClick, activeMenu, setActiveMenu, onDelete, onEdit, isHighlighted }) => {
+  const cellRef = useRef(null);
   
   const bind = useLongPress(
     () => onLongPress(cellId, component),
     () => onClick(cellId, component)
   );
 
+  // Scroll into view if highlighted
+  useEffect(() => {
+    if (isHighlighted && cellRef.current) {
+        cellRef.current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    }
+  }, [isHighlighted]);
+
   return (
     <div 
+      ref={cellRef}
       className={`
         aspect-square rounded-xl border flex flex-col items-center justify-center p-2 transition-all relative overflow-hidden group
         ${component 
@@ -22,7 +31,12 @@ const GridCell = ({ cellId, component, onLongPress, onClick, activeMenu, setActi
           : 'bg-dark-900 border-dark-700 border-dashed'}
       `}
     >
-       <div {...bind} className="relative h-full w-full flex flex-col items-center justify-center">
+       {/* Highlight Overlay (Breathing Red Border) */}
+       {isHighlighted && (
+         <div className="absolute inset-0 rounded-xl border-4 border-red-600 animate-pulse pointer-events-none z-20 shadow-[0_0_15px_rgba(220,38,38,0.7)]"></div>
+       )}
+
+       <div {...bind} className="relative h-full w-full flex flex-col items-center justify-center z-10">
           <span className="absolute top-1 left-2 text-[10px] font-mono text-gray-500 opacity-50">
             {cellId}
           </span>
@@ -51,7 +65,7 @@ const GridCell = ({ cellId, component, onLongPress, onClick, activeMenu, setActi
              initial={{ opacity: 0, scale: 0.9 }}
              animate={{ opacity: 1, scale: 1 }}
              exit={{ opacity: 0 }}
-             className="absolute inset-0 bg-dark-900/95 z-20 flex flex-col items-center justify-center space-y-2"
+             className="absolute inset-0 bg-dark-900/95 z-30 flex flex-col items-center justify-center space-y-2"
              onClick={(e) => e.stopPropagation()} 
            >
              <button 
@@ -79,7 +93,7 @@ const GridCell = ({ cellId, component, onLongPress, onClick, activeMenu, setActi
   );
 };
 
-const GridRenderer = ({ section, components = [], onUpdate }) => {
+const GridRenderer = ({ section, components = [], onUpdate, highlight }) => {
   const navigate = useNavigate();
   const [activeMenu, setActiveMenu] = useState(null);
 
@@ -148,6 +162,7 @@ const GridRenderer = ({ section, components = [], onUpdate }) => {
               setActiveMenu={setActiveMenu}
               onDelete={handleDelete}
               onEdit={handleEdit}
+              isHighlighted={highlight === cellId} // Pass highlight state
             />
           );
         })
