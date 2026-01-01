@@ -9,7 +9,7 @@ const ContainerCard = ({ container, onUpdate }) => {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
 
-  // Safety check: if container is null/undefined, don't render to prevent crash
+  // Safety check to prevent crash if data is malformed
   if (!container) return null;
 
   const handleClick = () => {
@@ -24,11 +24,12 @@ const ContainerCard = ({ container, onUpdate }) => {
     setShowMenu(true);
   };
 
+  // Bind hook
   const bind = useLongPress(handleLongPress, handleClick, { shouldPreventDefault: true });
 
   const handleDelete = async (e) => {
     e.stopPropagation();
-    if (window.confirm(`Delete container "${container.name}" and all its contents?`)) {
+    if (window.confirm(`Delete container "${container.name}"?`)) {
       try {
         await api.delete(`/inventory/containers/${container.id}`);
         setShowMenu(false);
