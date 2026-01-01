@@ -25,7 +25,7 @@ const useLongPress = (onLongPress, onClick, { shouldPreventDefault = true, delay
       setLongPressTriggered(false);
       target.current = undefined;
     },
-    [shouldTriggerClick, onClick, longPressTriggered]
+    [onClick, longPressTriggered] // Fixed: Removed 'shouldTriggerClick' from here
   );
 
   return {
