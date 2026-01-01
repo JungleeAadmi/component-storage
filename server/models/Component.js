@@ -22,8 +22,11 @@ module.exports = {
       FROM components c
       JOIN sections s ON c.section_id = s.id
       JOIN containers con ON s.container_id = con.id
-      WHERE c.name LIKE ? OR c.specification LIKE ?
+      WHERE c.name LIKE ? 
+         OR c.specification LIKE ? 
+         OR c.custom_data LIKE ?
     `;
-    return db.prepare(sql).all(`%${query}%`, `%${query}%`);
+    // Bind the query parameter to Name, Specification, and Custom Data (Sub-items/Notes)
+    return db.prepare(sql).all(`%${query}%`, `%${query}%`, `%${query}%`);
   }
 };
