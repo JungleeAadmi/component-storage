@@ -14,25 +14,25 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    // Generate unique filename: fieldname-timestamp.ext
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
 
-// File filter (Images only for now)
+// File filter (Allow Images and PDFs)
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+  if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Not an image! Please upload an image.'), false);
+    cb(new Error('Invalid file type. Only Images and PDFs are allowed.'), false);
   }
 };
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 1024 * 1024 * 5 } // 5MB limit
-  // fileFilter: fileFilter // Uncomment if you want strict image only
+  limits: { fileSize: 1024 * 1024 * 10 }, // 10MB limit
+  fileFilter: fileFilter
 });
 
 module.exports = upload;

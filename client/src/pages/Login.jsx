@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 
 const Login = () => {
-  const [isLogin, setIsLogin] = useState(true); // Toggle between Login and Signup
+  const [isLogin, setIsLogin] = useState(true);
   const { login, signup } = useAuth();
   const [formData, setFormData] = useState({ username: '', password: '', full_name: '' });
   const [error, setError] = useState('');
@@ -29,9 +29,11 @@ const Login = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md bg-dark-800 p-8 rounded-2xl shadow-xl border border-dark-700"
       >
-        <div className="text-center mb-8">
-            {/* You can replace this text with an <img> tag pointing to /logo.svg later */}
-            <h1 className="text-3xl font-bold text-primary-500 mb-2">Inventra</h1>
+        <div className="text-center mb-8 flex flex-col items-center">
+            <div className="w-16 h-16 mb-4 rounded-2xl overflow-hidden shadow-lg shadow-primary-600/20">
+                 <img src="/android-chrome-192x192.png" alt="Logo" className="w-full h-full object-cover" onError={(e) => {e.target.style.display='none'; e.target.parentElement.classList.add('bg-primary-600'); e.target.parentElement.innerHTML='<span class="text-white font-bold text-2xl flex items-center justify-center h-full">I</span>'}} />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-1 tracking-tight">Inventra</h1>
             <p className="text-gray-400">Component Management System</p>
         </div>
 

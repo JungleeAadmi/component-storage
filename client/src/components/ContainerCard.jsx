@@ -9,7 +9,6 @@ const ContainerCard = ({ container, onUpdate }) => {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
 
-  // Safety check to prevent crash if data is malformed
   if (!container) return null;
 
   const handleClick = () => {
@@ -24,12 +23,11 @@ const ContainerCard = ({ container, onUpdate }) => {
     setShowMenu(true);
   };
 
-  // Bind hook
   const bind = useLongPress(handleLongPress, handleClick, { shouldPreventDefault: true });
 
   const handleDelete = async (e) => {
     e.stopPropagation();
-    if (window.confirm(`Delete container "${container.name}"?`)) {
+    if (window.confirm(`Delete container "${container.name}" and all contents?`)) {
       try {
         await api.delete(`/inventory/containers/${container.id}`);
         setShowMenu(false);
@@ -39,6 +37,12 @@ const ContainerCard = ({ container, onUpdate }) => {
         alert("Failed to delete");
       }
     }
+  };
+
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    navigate(`/edit-container/${container.id}`);
   };
 
   return (
@@ -78,7 +82,7 @@ const ContainerCard = ({ container, onUpdate }) => {
             <div className="text-white font-bold mb-1">Options</div>
             
             <button 
-              onClick={(e) => { e.stopPropagation(); alert("Edit Container Layout coming soon"); setShowMenu(false); }}
+              onClick={handleEdit}
               className="flex items-center space-x-2 text-sm text-white bg-dark-700 px-4 py-2 rounded-lg w-3/4 justify-center"
             >
               <Edit2 size={16} /> <span>Edit</span>

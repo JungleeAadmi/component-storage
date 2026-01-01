@@ -1,18 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Search, Loader } from 'lucide-react';
 import api from '../services/api';
 import ContainerCard from '../components/ContainerCard';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [containers, setContainers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchContainers = async () => {
     try {
       const { data } = await api.get('/inventory/containers');
-      // Ensure data is an array before setting
       setContainers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch containers", error);
@@ -25,6 +24,13 @@ const Dashboard = () => {
   useEffect(() => {
     fetchContainers();
   }, []);
+
+  const handleSearch = (e) => {
+    const val = e.target.value;
+    if (val) {
+        navigate(`/search?q=${val}`);
+    }
+  };
 
   return (
     <div>
@@ -47,14 +53,8 @@ const Dashboard = () => {
           type="text" 
           placeholder="Search components..." 
           className="w-full bg-dark-800 border border-dark-700 rounded-xl pl-12 p-4 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-sm placeholder-gray-500"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={handleSearch}
         />
-        {searchTerm && (
-           <Link to={`/search?q=${searchTerm}`} className="absolute right-3 top-3 bg-dark-700 text-xs text-white px-2 py-1 rounded hover:bg-primary-600">
-             Go
-           </Link>
-        )}
       </div>
 
       {loading ? (

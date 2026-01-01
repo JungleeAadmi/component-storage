@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
-import { Camera, Save, ArrowLeft, Link as LinkIcon, Edit2, X, ZoomIn } from 'lucide-react';
+import { Camera, Save, ArrowLeft, Link as LinkIcon, Edit2, X, ZoomIn, Paperclip, FileText } from 'lucide-react';
 import api from '../services/api';
 import CameraCapture from '../components/CameraCapture';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,7 +17,10 @@ const ComponentDetail = () => {
   const [loading, setLoading] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [isEditing, setIsEditing] = useState(!id || isEditModeParam);
+  
+  // Viewer States
   const [showImageZoom, setShowImageZoom] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -25,30 +28,31 @@ const ComponentDetail = () => {
     specification: '',
     purchase_link: '',
     custom_data: '',
-    image: null
+    image: null,
+    attachments: [] // New files to upload
   });
+  
   const [previewUrl, setPreviewUrl] = useState('');
   const [existingImageUrl, setExistingImageUrl] = useState('');
+  const [existingAttachments, setExistingAttachments] = useState([]);
 
   useEffect(() => {
     if (id) {
-      const fetchComponent = async () => {
-        try {
-          const { data } = await api.get(`/inventory/components/${id}`);
-          setFormData({
-            name: data.name,
-            quantity: data.quantity,
-            specification: data.specification || '',
-            purchase_link: data.purchase_link || '',
-            custom_data: data.custom_data?.notes || '',
-            image: null
-          });
-          setExistingImageUrl(data.image_url);
-        } catch (error) {
-          console.error("Fetch error", error);
-        }
-      };
-      fetchComponent();
+      api.get(`/inventory/components/${id}`)
+        .then(({ data }) => {
+            setFormData({
+                name: data.name,
+                quantity: data.quantity,
+                specification: data.specification || '',
+                purchase_link: data.purchase_link || '',
+                custom_data: data.custom_data?.notes || '',
+                image: null,
+                attachments: []
+            });
+            setExistingImageUrl(data.image_url);
+            setExistingAttachments(data.attachments || []);
+        })
+        .catch(err => console.error(err));
     }
   }, [id]);
 
@@ -58,11 +62,16 @@ const ComponentDetail = () => {
     setShowCamera(false);
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFormData({ ...formData, image: file });
-      setPreviewUrl(URL.createObjectURL(file));
+  const handleFileChange = (e, field) => {
+    if (field === 'image') {
+        const file = e.target.files[0];
+        if (file) {
+            setFormData({ ...formData, image: file });
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    } else if (field === 'attachments') {
+        const files = Array.from(e.target.files);
+        setFormData({ ...formData, attachments: [...formData.attachments, ...files] });
     }
   };
 
@@ -79,14 +88,19 @@ const ComponentDetail = () => {
     data.append('specification', formData.specification);
     data.append('purchase_link', formData.purchase_link);
     data.append('custom_data', JSON.stringify({ notes: formData.custom_data }));
-    if (formData.image) {
-      data.append('image', formData.image);
-    }
+    
+    if (formData.image) data.append('image', formData.image);
+    
+    // Append attachments
+    formData.attachments.forEach(file => {
+        data.append('attachments', file);
+    });
 
     try {
       if (id) {
         await api.put(`/inventory/components/${id}`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
-        setIsEditing(false);
+        // Refresh to see new attachments
+        window.location.reload(); 
       } else {
         await api.post('/inventory/components', data, { headers: { 'Content-Type': 'multipart/form-data' } });
         navigate(-1);
@@ -101,8 +115,17 @@ const ComponentDetail = () => {
 
   const displayImage = previewUrl || existingImageUrl;
 
+  const openAttachment = (url, type) => {
+    if (type === 'application/pdf') {
+        setPdfUrl(url);
+    } else {
+        window.open(url, '_blank');
+    }
+  };
+
   return (
     <div className="max-w-xl mx-auto pb-20">
+      {/* Camera Modal */}
       {showCamera && (
         <CameraCapture 
           onCapture={handleCapture} 
@@ -110,6 +133,27 @@ const ComponentDetail = () => {
         />
       )}
 
+      {/* PDF Viewer Modal */}
+      <AnimatePresence>
+        {pdfUrl && (
+             <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[80] bg-black/90 flex flex-col items-center justify-center p-4"
+             >
+                <div className="w-full max-w-4xl h-full bg-white rounded-xl overflow-hidden relative flex flex-col">
+                    <div className="bg-dark-800 p-2 flex justify-between items-center">
+                        <span className="text-white font-bold ml-2">Document Viewer</span>
+                        <button onClick={() => setPdfUrl(null)} className="text-white p-2 hover:bg-dark-700 rounded-lg">
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <iframe src={pdfUrl} className="flex-1 w-full h-full" title="PDF Viewer"></iframe>
+                </div>
+             </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Image Zoom Modal */}
       <AnimatePresence>
         {showImageZoom && displayImage && (
             <motion.div 
@@ -125,6 +169,7 @@ const ComponentDetail = () => {
         )}
       </AnimatePresence>
 
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
             <button onClick={() => navigate(-1)} className="p-2 bg-dark-800 rounded-lg hover:text-white text-gray-400">
@@ -145,6 +190,7 @@ const ComponentDetail = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Main Image */}
         <div className="flex flex-col items-center justify-center space-y-4">
           <div 
             className="w-full aspect-video bg-dark-800 rounded-2xl border border-dark-700 overflow-hidden flex items-center justify-center relative group"
@@ -172,13 +218,14 @@ const ComponentDetail = () => {
                 <Camera size={16} /> <span>Camera</span>
                 </button>
                 <label className="px-4 py-2 bg-dark-800 text-gray-300 rounded-lg border border-dark-700 flex items-center space-x-2 text-sm cursor-pointer hover:bg-dark-700">
-                <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'image')} />
                 <span>Upload</span>
                 </label>
             </div>
           )}
         </div>
 
+        {/* Fields */}
         <div className="space-y-4">
           <div>
             <label className="block text-sm text-gray-400 mb-1">Name</label>
@@ -221,6 +268,43 @@ const ComponentDetail = () => {
                 />
             ) : (
                 <div className="text-gray-300 whitespace-pre-wrap">{formData.specification || "N/A"}</div>
+            )}
+          </div>
+
+          {/* Attachments Section */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Attachments (Datasheets, etc)</label>
+            
+            <div className="space-y-2 mb-3">
+                {/* Existing Attachments */}
+                {existingAttachments.map(att => (
+                    <div key={att.id} onClick={() => openAttachment(att.file_path, att.file_type)} className="flex items-center space-x-3 p-3 bg-dark-800 rounded-lg cursor-pointer hover:bg-dark-700">
+                        <FileText size={20} className="text-primary-400" />
+                        <span className="text-sm text-white truncate flex-1">
+                            {att.file_path.split('/').pop()}
+                        </span>
+                    </div>
+                ))}
+                
+                {/* Pending Uploads */}
+                {formData.attachments.map((file, idx) => (
+                    <div key={idx} className="flex items-center space-x-3 p-3 bg-dark-800/50 border border-dashed border-dark-600 rounded-lg">
+                        <Paperclip size={20} className="text-gray-500" />
+                        <span className="text-sm text-gray-300 truncate flex-1">{file.name}</span>
+                        <button type="button" onClick={() => {
+                             const newAtt = formData.attachments.filter((_, i) => i !== idx);
+                             setFormData({...formData, attachments: newAtt});
+                        }} className="text-red-400"><X size={16} /></button>
+                    </div>
+                ))}
+            </div>
+
+            {isEditing && (
+                 <label className="flex items-center justify-center space-x-2 w-full p-3 border border-dashed border-dark-600 rounded-lg cursor-pointer hover:bg-dark-800 transition-colors">
+                    <Paperclip size={18} className="text-gray-400" />
+                    <span className="text-sm text-gray-400">Add Attachments (PDF/Img)</span>
+                    <input type="file" multiple accept=".pdf,image/*" className="hidden" onChange={(e) => handleFileChange(e, 'attachments')} />
+                 </label>
             )}
           </div>
 

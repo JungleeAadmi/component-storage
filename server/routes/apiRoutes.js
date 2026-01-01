@@ -7,8 +7,9 @@ const {
   getContainers, 
   createContainer, 
   getContainerById,
+  updateContainer, // New
   deleteContainer,
-  getSectionById, // Imported here
+  getSectionById,
   getComponentsBySection,
   addComponent,
   getComponentById,
@@ -18,6 +19,12 @@ const {
 
 const { globalSearch } = require('../controllers/searchController');
 
+// Helper for file uploads (Main image + multiple attachments)
+const uploadFields = upload.fields([
+  { name: 'image', maxCount: 1 }, 
+  { name: 'attachments', maxCount: 10 }
+]);
+
 // Container Routes
 router.route('/containers')
   .get(protect, getContainers)
@@ -25,18 +32,18 @@ router.route('/containers')
 
 router.route('/containers/:id')
   .get(protect, getContainerById)
+  .put(protect, updateContainer) // New
   .delete(protect, deleteContainer);
 
-// Section Routes (New)
+// Section Routes
 router.get('/sections/:id', protect, getSectionById);
 router.get('/sections/:sectionId/components', protect, getComponentsBySection);
 
 // Component Routes
-router.post('/components', protect, upload.single('image'), addComponent);
+router.post('/components', protect, uploadFields, addComponent);
 router.get('/components/:id', protect, getComponentById);
-router.put('/components/:id', protect, upload.single('image'), updateComponent);
+router.put('/components/:id', protect, uploadFields, updateComponent);
 router.delete('/components/:id', protect, deleteComponent);
-
 
 // Search Route
 router.get('/search', protect, globalSearch);

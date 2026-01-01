@@ -12,10 +12,10 @@ const Navbar = () => {
     <nav className="bg-dark-800 border-b border-dark-700 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          {/* Logo & User Info */}
           <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg shadow-primary-600/20 group-hover:scale-105 transition-transform">
-              I
+            {/* Logo Image */}
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-primary-600/20 group-hover:scale-105 transition-transform">
+                 <img src="/favicon-32x32.png" alt="I" className="w-full h-full object-cover" onError={(e) => {e.target.style.display='none'; e.target.parentElement.classList.add('bg-primary-600'); e.target.parentElement.innerHTML='<span class="text-white font-bold flex items-center justify-center h-full">I</span>'}} />
             </div>
             <div className="flex flex-col">
               <span className="text-lg font-bold text-white leading-tight tracking-tight">Inventra</span>
@@ -27,7 +27,6 @@ const Navbar = () => {
             </div>
           </Link>
 
-          {/* Hamburger Button */}
           <button 
             onClick={() => setIsOpen(!isOpen)}
             className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-700 transition-colors focus:outline-none"
@@ -37,7 +36,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Menu Dropdown */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
@@ -47,7 +45,6 @@ const Navbar = () => {
             className="bg-dark-800 border-b border-dark-700 overflow-hidden"
           >
             <div className="px-4 py-3 space-y-2">
-              {/* Mobile User Card */}
               <div className="flex items-center space-x-3 p-3 bg-dark-900 rounded-xl mb-4 border border-dark-700">
                 <div className="w-10 h-10 bg-dark-800 rounded-full flex items-center justify-center text-white font-bold text-lg border border-dark-600">
                   {user?.username?.charAt(0).toUpperCase()}

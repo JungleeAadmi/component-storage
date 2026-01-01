@@ -51,6 +51,50 @@ exports.createContainer = (req, res) => {
   }
 };
 
+exports.updateContainer = (req, res) => {
+  const { name, description, config } = req.body;
+  const { id } = req.params;
+  
+  try {
+    // Update basic info
+    const stmt = db.prepare('UPDATE containers SET name = ?, description = ? WHERE id = ?');
+    stmt.run(name, description, id);
+
+    // Handle Sections (Add new ones, Update existing names)
+    // NOTE: Changing rows/cols of existing sections is dangerous for existing items. 
+    // We will allow adding new sections or renaming.
+    if (config && Array.isArray(config)) {
+      config.forEach((section) => {
+        if (section.id) {
+          // Update existing
+          // We only update name to be safe. Updating grid size requires complex logic not safely handled in one go.
+          const updateSec = db.prepare('UPDATE sections SET name = ? WHERE id = ?');
+          updateSec.run(section.name, section.id);
+        } else {
+          // Add new
+          // Determine next char? 
+          // Simple approach: get count
+          const count = db.prepare('SELECT COUNT(*) as c FROM sections WHERE container_id = ?').get(id).c;
+          const char = String.fromCharCode(65 + count); // logic might need improvement for mixed updates but works for appending
+          
+          Container.createSection({
+            container_id: id,
+            name: section.name,
+            config_type: 'grid',
+            rows: section.rows,
+            cols: section.cols,
+            designation_char: char
+          });
+        }
+      });
+    }
+
+    res.json({ message: 'Container updated' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.deleteContainer = (req, res) => {
   try {
     const stmt = db.prepare('DELETE FROM containers WHERE id = ?');
@@ -98,6 +142,11 @@ exports.getComponentById = (req, res) => {
     const component = stmt.get(req.params.id);
     if (component) {
         try { component.custom_data = JSON.parse(component.custom_data); } catch(e) {}
+        
+        // Fetch attachments
+        const attachments = db.prepare('SELECT * FROM attachments WHERE component_id = ?').all(req.params.id);
+        component.attachments = attachments;
+        
         res.json(component);
     } else {
         res.status(404).json({ message: 'Component not found' });
@@ -109,7 +158,9 @@ exports.getComponentById = (req, res) => {
 
 exports.addComponent = (req, res) => {
   const { section_id, grid_position, name, quantity, specification, purchase_link, custom_data } = req.body;
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
+  
+  // Handle main image
+  const mainImage = req.files['image'] ? `/uploads/${req.files['image'][0].filename}` : '';
 
   try {
     const result = Component.create({
@@ -119,10 +170,21 @@ exports.addComponent = (req, res) => {
       quantity,
       specification,
       custom_data: custom_data, 
-      image_url: imageUrl,
+      image_url: mainImage,
       purchase_link
     });
-    res.status(201).json({ message: 'Component added', id: result.lastInsertRowid });
+    
+    const componentId = result.lastInsertRowid;
+
+    // Handle Attachments
+    if (req.files['attachments']) {
+      const insertAttach = db.prepare('INSERT INTO attachments (component_id, file_path, file_type) VALUES (?, ?, ?)');
+      req.files['attachments'].forEach(file => {
+        insertAttach.run(componentId, `/uploads/${file.filename}`, file.mimetype);
+      });
+    }
+
+    res.status(201).json({ message: 'Component added', id: componentId });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -134,8 +196,8 @@ exports.updateComponent = (req, res) => {
   
   try {
     let imageUrl = null;
-    if (req.file) {
-      imageUrl = `/uploads/${req.file.filename}`;
+    if (req.files['image']) {
+      imageUrl = `/uploads/${req.files['image'][0].filename}`;
     }
 
     const current = db.prepare('SELECT image_url FROM components WHERE id = ?').get(id);
@@ -150,6 +212,15 @@ exports.updateComponent = (req, res) => {
     `);
     
     stmt.run(name, quantity, specification, purchase_link, custom_data, finalImage, id);
+
+    // Handle New Attachments
+    if (req.files['attachments']) {
+      const insertAttach = db.prepare('INSERT INTO attachments (component_id, file_path, file_type) VALUES (?, ?, ?)');
+      req.files['attachments'].forEach(file => {
+        insertAttach.run(id, `/uploads/${file.filename}`, file.mimetype);
+      });
+    }
+
     res.json({ message: 'Component updated' });
   } catch (error) {
     res.status(500).json({ message: error.message });
