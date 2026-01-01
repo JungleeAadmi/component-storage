@@ -21,7 +21,6 @@ const ContainerCard = ({ container, onUpdate }) => {
     setShowMenu(true);
   };
 
-  // Bind the long press hook
   const bind = useLongPress(handleLongPress, handleClick, { shouldPreventDefault: true });
 
   const handleDelete = async (e) => {
@@ -46,12 +45,10 @@ const ContainerCard = ({ container, onUpdate }) => {
       className="bg-dark-800 p-5 rounded-2xl border border-dark-700 hover:border-primary-500/50 hover:shadow-lg hover:shadow-primary-500/10 transition-all cursor-pointer group relative overflow-hidden select-none"
     >
       <div className="flex flex-col items-center text-center space-y-3">
-        {/* Icon Circle */}
         <div className="w-16 h-16 bg-dark-900 rounded-full flex items-center justify-center group-hover:bg-primary-600/10 transition-colors">
           <Box size={32} className="text-gray-400 group-hover:text-primary-500 transition-colors" />
         </div>
         
-        {/* Text Info */}
         <div>
           <h3 className="text-white font-semibold text-lg truncate w-full max-w-[150px]">
             {container.name}
@@ -59,13 +56,12 @@ const ContainerCard = ({ container, onUpdate }) => {
           <div className="flex items-center justify-center space-x-1 text-xs text-gray-500 mt-1">
             <Layers size={12} />
             <span>
-                {container.sections ? container.sections.length : (Array.isArray(container.sections) ? 0 : '?')} Sections
+                {container.sections ? container.sections.length : 0} Sections
             </span>
           </div>
         </div>
       </div>
 
-      {/* Context Menu Overlay */}
       <AnimatePresence>
         {showMenu && (
           <motion.div 

@@ -13,11 +13,9 @@ const TrayView = () => {
 
   const fetchData = async () => {
     try {
-      // 1. Fetch components
       const compRes = await api.get(`/inventory/sections/${id}/components`);
       setComponents(compRes.data);
 
-      // 2. Fetch section details DIRECTLY
       const sectionRes = await api.get(`/inventory/sections/${id}`);
       setSection(sectionRes.data);
       

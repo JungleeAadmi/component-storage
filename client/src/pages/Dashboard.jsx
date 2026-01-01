@@ -10,7 +10,6 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchContainers = async () => {
-    // Note: Don't set loading true on refresh to avoid flickering whole screen
     try {
       const { data } = await api.get('/inventory/containers');
       setContainers(data);
@@ -21,14 +20,12 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch containers on load
   useEffect(() => {
     fetchContainers();
   }, []);
 
   return (
     <div>
-      {/* Top Bar */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">My Storage</h2>
         <Link 
@@ -40,7 +37,6 @@ const Dashboard = () => {
         </Link>
       </div>
 
-      {/* Search Bar */}
       <div className="mb-8 relative">
         <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
             <Search size={20} />
@@ -59,7 +55,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Content Grid */}
       {loading ? (
         <div className="flex justify-center py-20">
           <Loader className="animate-spin text-primary-500" size={32} />
