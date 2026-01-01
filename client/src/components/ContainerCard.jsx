@@ -9,6 +9,9 @@ const ContainerCard = ({ container, onUpdate }) => {
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
 
+  // Safety check: if container is null/undefined, don't render to prevent crash
+  if (!container) return null;
+
   const handleClick = () => {
     if (showMenu) {
       setShowMenu(false);
@@ -51,7 +54,7 @@ const ContainerCard = ({ container, onUpdate }) => {
         
         <div>
           <h3 className="text-white font-semibold text-lg truncate w-full max-w-[150px]">
-            {container.name}
+            {container.name || 'Untitled'}
           </h3>
           <div className="flex items-center justify-center space-x-1 text-xs text-gray-500 mt-1">
             <Layers size={12} />

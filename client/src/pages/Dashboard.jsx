@@ -12,9 +12,11 @@ const Dashboard = () => {
   const fetchContainers = async () => {
     try {
       const { data } = await api.get('/inventory/containers');
-      setContainers(data);
+      // Ensure data is an array before setting
+      setContainers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch containers", error);
+      setContainers([]);
     } finally {
       setLoading(false);
     }
