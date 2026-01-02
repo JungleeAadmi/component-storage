@@ -38,7 +38,11 @@ const CameraCapture = ({ onCapture, onClose }) => {
     ctx.drawImage(videoRef.current, 0, 0);
     
     canvas.toBlob((blob) => {
-      const file = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+      // FIX: Add timestamp to filename to prevent overwriting
+      // This ensures every photo has a unique name on the server
+      const timestamp = Date.now();
+      const file = new File([blob], `capture-${timestamp}.jpg`, { type: "image/jpeg" });
+      
       stopCamera();
       onCapture(file);
     }, 'image/jpeg', 0.8);
