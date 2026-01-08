@@ -29,7 +29,6 @@ exports.getContainerById = (req, res) => {
 exports.createContainer = (req, res) => {
   const { name, description } = req.body;
   
-  // Parse config from string if coming from FormData
   let config = [];
   try {
     config = JSON.parse(req.body.config || '[]');
@@ -37,11 +36,9 @@ exports.createContainer = (req, res) => {
     console.error("Config parsing error", e);
   }
 
-  // Handle Image
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
 
   try {
-    // Insert with image
     const stmt = db.prepare('INSERT INTO containers (name, description, image_url) VALUES (?, ?, ?)');
     const containerResult = stmt.run(name, description, imageUrl);
     const containerId = containerResult.lastInsertRowid;
@@ -52,9 +49,9 @@ exports.createContainer = (req, res) => {
         Container.createSection({
           container_id: containerId,
           name: section.name,
-          config_type: 'grid',
-          rows: section.rows,
-          cols: section.cols,
+          config_type: section.config_type || 'grid', // Use provided type or default to grid
+          rows: section.rows || 1,
+          cols: section.cols || 1,
           designation_char: char
         });
       });
@@ -77,21 +74,17 @@ exports.updateContainer = (req, res) => {
   }
   
   try {
-    // Handle Image Update
     let imageUrl = null;
     if (req.file) {
       imageUrl = `/uploads/${req.file.filename}`;
     }
 
-    // Get current image to preserve if no new one
     const current = db.prepare('SELECT image_url FROM containers WHERE id = ?').get(id);
     const finalImage = imageUrl || (current ? current.image_url : '');
 
-    // Update basic info
     const stmt = db.prepare('UPDATE containers SET name = ?, description = ?, image_url = ? WHERE id = ?');
     stmt.run(name, description, finalImage, id);
 
-    // Handle Sections
     if (config && Array.isArray(config)) {
       config.forEach((section) => {
         if (section.id) {
@@ -103,9 +96,9 @@ exports.updateContainer = (req, res) => {
           Container.createSection({
             container_id: id,
             name: section.name,
-            config_type: 'grid',
-            rows: section.rows,
-            cols: section.cols,
+            config_type: section.config_type || 'grid', // Use provided type
+            rows: section.rows || 1,
+            cols: section.cols || 1,
             designation_char: char
           });
         }
@@ -183,7 +176,7 @@ exports.addComponent = (req, res) => {
   try {
     const result = Component.create({
       section_id,
-      grid_position,
+      grid_position, // Can be null/empty for List type
       name,
       quantity,
       specification,

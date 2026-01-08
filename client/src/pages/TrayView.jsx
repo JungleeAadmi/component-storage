@@ -3,13 +3,12 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import api from '../services/api';
 import GridRenderer from '../components/GridRenderer';
+import ListRenderer from '../components/ListRenderer';
 
 const TrayView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
-  // Get the grid position to highlight (e.g., "A-1A")
   const highlightPos = searchParams.get('highlight');
 
   const [section, setSection] = useState(null);
@@ -18,11 +17,9 @@ const TrayView = () => {
 
   const fetchData = async () => {
     try {
-      // 1. Fetch components
       const compRes = await api.get(`/inventory/sections/${id}/components`);
       setComponents(compRes.data);
 
-      // 2. Fetch section details
       const sectionRes = await api.get(`/inventory/sections/${id}`);
       setSection(sectionRes.data);
       
@@ -37,8 +34,8 @@ const TrayView = () => {
     fetchData();
   }, [id]);
 
-  if (loading) return <div className="p-8 text-center text-white">Loading Tray...</div>;
-  if (!section) return <div className="p-8 text-center text-red-500">Tray not found</div>;
+  if (loading) return <div className="p-8 text-center text-white">Loading...</div>;
+  if (!section) return <div className="p-8 text-center text-red-500">Section not found</div>;
 
   return (
     <div className="pb-20">
@@ -48,16 +45,28 @@ const TrayView = () => {
         </button>
         <div>
           <h1 className="text-xl font-bold text-white">{section.name}</h1>
-          <p className="text-gray-400 text-xs">Tray {section.designation_char} • {section.rows}x{section.cols}</p>
+          <p className="text-gray-400 text-xs">
+            {section.config_type === 'list' 
+                ? 'List Storage' 
+                : `Tray ${section.designation_char} • ${section.rows}x${section.cols}`}
+          </p>
         </div>
       </div>
 
-      <GridRenderer 
-        section={section} 
-        components={components} 
-        onUpdate={fetchData} 
-        highlight={highlightPos} // Pass the highlight prop
-      />
+      {section.config_type === 'list' ? (
+        <ListRenderer 
+            section={section}
+            components={components}
+            onUpdate={fetchData}
+        />
+      ) : (
+        <GridRenderer 
+            section={section} 
+            components={components} 
+            onUpdate={fetchData} 
+            highlight={highlightPos} 
+        />
+      )}
     </div>
   );
 };

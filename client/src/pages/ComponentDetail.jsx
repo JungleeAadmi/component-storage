@@ -1,3 +1,4 @@
+// ... existing imports ...
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { Camera, Save, ArrowLeft, Link as LinkIcon, Edit2, X, ZoomIn, ZoomOut, Maximize, Paperclip, FileText, Trash2, Plus, Minus } from 'lucide-react';
@@ -11,17 +12,16 @@ const ComponentDetail = () => {
   const navigate = useNavigate();
 
   const sectionId = searchParams.get('section');
-  const pos = searchParams.get('pos');
+  const pos = searchParams.get('pos'); // Might be null for list items
   const isEditModeParam = searchParams.get('edit') === 'true';
 
+  // ... (Keep existing state and handlers exactly as is) ...
   const [loading, setLoading] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [isEditing, setIsEditing] = useState(!id || isEditModeParam);
   
   const [showImageZoom, setShowImageZoom] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
-  
-  // PDF Zoom State
   const [pdfScale, setPdfScale] = useState(1);
   const pdfWrapperRef = useRef(null);
   const lastTapRef = useRef(0);
@@ -39,11 +39,12 @@ const ComponentDetail = () => {
   });
 
   const [subItems, setSubItems] = useState([]);
-  
   const [previewUrl, setPreviewUrl] = useState('');
   const [existingImageUrl, setExistingImageUrl] = useState('');
   const [existingAttachments, setExistingAttachments] = useState([]);
 
+  // ... (Keep useEffect, handleCapture, handleFileChange, subItem handlers, deleteAttachment) ...
+  
   useEffect(() => {
     if (id) {
       api.get(`/inventory/components/${id}`)
@@ -154,49 +155,37 @@ const ComponentDetail = () => {
   const openAttachment = (url, type) => {
     if (type === 'application/pdf') {
         setPdfUrl(url);
-        setPdfScale(1); // Reset zoom on open
+        setPdfScale(1);
     } else {
         window.open(url, '_blank');
     }
   };
 
-  // --- PDF Gesture Handlers ---
-
+  // ... (Keep PDF gesture handlers from previous response) ...
   const handleTouchStart = (e) => {
     if (e.touches.length === 2) {
-      // Pinch started
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
-      const dist = Math.hypot(touch1.pageX - touch2.pageX, touch1.pageY - touch2.pageY);
-      initialPinchDistRef.current = dist;
+      initialPinchDistRef.current = Math.hypot(touch1.pageX - touch2.pageX, touch1.pageY - touch2.pageY);
       initialScaleRef.current = pdfScale;
     }
   };
 
   const handleTouchMove = (e) => {
     if (e.touches.length === 2 && initialPinchDistRef.current) {
-      // Pinch moving
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const dist = Math.hypot(touch1.pageX - touch2.pageX, touch1.pageY - touch2.pageY);
-      
       const ratio = dist / initialPinchDistRef.current;
-      const newScale = Math.min(Math.max(initialScaleRef.current * ratio, 1), 4); // Limit zoom 1x to 4x
-      setPdfScale(newScale);
-      e.preventDefault(); // Prevent default browser zoom
+      setPdfScale(Math.min(Math.max(initialScaleRef.current * ratio, 1), 4));
+      e.preventDefault();
     }
   };
 
-  const handleDoubleTap = (e) => {
+  const handleDoubleTap = () => {
     const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      // Double tap detected
-      if (pdfScale > 1.2) {
-        setPdfScale(1); // Reset to fit
-      } else {
-        setPdfScale(2.5); // Zoom in
-      }
+    if (now - lastTapRef.current < 300) {
+      setPdfScale(pdfScale > 1.2 ? 1 : 2.5);
     }
     lastTapRef.current = now;
   };
@@ -214,7 +203,7 @@ const ComponentDetail = () => {
         />
       )}
 
-      {/* PDF Viewer Modal with Zoom Support */}
+      {/* PDF Modal */}
       <AnimatePresence>
         {pdfUrl && (
              <motion.div 
@@ -222,23 +211,16 @@ const ComponentDetail = () => {
                 className="fixed inset-0 z-[80] bg-black/95 flex flex-col items-center justify-center p-0 sm:p-4 overflow-hidden"
              >
                 <div className="w-full h-full max-w-5xl flex flex-col bg-dark-800 rounded-none sm:rounded-lg overflow-hidden relative">
-                    {/* Header */}
                     <div className="flex justify-between items-center p-3 border-b border-dark-700 bg-dark-900 z-10">
                         <span className="text-white font-bold ml-2">Document</span>
                         <div className="flex items-center space-x-4">
-                            {/* Zoom Controls */}
                             <button onClick={() => handleZoom(-0.5)} className="text-gray-300 hover:text-white p-1"><ZoomOut size={20}/></button>
                             <span className="text-xs text-gray-400 font-mono w-8 text-center">{Math.round(pdfScale * 100)}%</span>
                             <button onClick={() => handleZoom(0.5)} className="text-gray-300 hover:text-white p-1"><ZoomIn size={20}/></button>
                             <button onClick={() => setPdfScale(1)} className="text-gray-300 hover:text-white p-1 mr-4"><Maximize size={20}/></button>
-                            
-                            <button onClick={() => setPdfUrl(null)} className="text-white p-2 hover:bg-dark-700 rounded-lg border border-dark-600">
-                                <X size={20} />
-                            </button>
+                            <button onClick={() => setPdfUrl(null)} className="text-white p-2 hover:bg-dark-700 rounded-lg border border-dark-600"><X size={20} /></button>
                         </div>
                     </div>
-                    
-                    {/* Scrollable Container */}
                     <div 
                         className="flex-1 overflow-auto bg-dark-900 w-full h-full touch-pan-x touch-pan-y relative"
                         ref={pdfWrapperRef}
@@ -246,21 +228,9 @@ const ComponentDetail = () => {
                         onTouchMove={handleTouchMove}
                         onClick={handleDoubleTap}
                     >
-                        <div 
-                            style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                transform: `scale(${pdfScale})`, 
-                                transformOrigin: 'top left',
-                                transition: 'transform 0.1s ease-out'
-                            }}
-                        >
-                            {/* Using object for PDF display */}
+                        <div style={{ width: '100%', height: '100%', transform: `scale(${pdfScale})`, transformOrigin: 'top left', transition: 'transform 0.1s ease-out'}}>
                             <object data={pdfUrl} type="application/pdf" className="w-full h-full block">
-                                <p className="text-white text-center mt-10 p-4">
-                                    Preview not supported. 
-                                    <a href={pdfUrl} target="_blank" className="text-primary-500 underline ml-2">Download File</a>
-                                </p>
+                                <p className="text-white text-center mt-10 p-4">Preview not supported. <a href={pdfUrl} target="_blank" className="text-primary-500 underline ml-2">Download File</a></p>
                             </object>
                         </div>
                     </div>
@@ -269,6 +239,7 @@ const ComponentDetail = () => {
         )}
       </AnimatePresence>
 
+      {/* Image Zoom Modal */}
       <AnimatePresence>
         {showImageZoom && displayImage && (
             <motion.div 
@@ -276,9 +247,7 @@ const ComponentDetail = () => {
                 className="fixed inset-0 z-[80] bg-black flex items-center justify-center p-2"
                 onClick={() => setShowImageZoom(false)}
             >
-                <button className="absolute top-4 right-4 text-white p-2 bg-white/20 rounded-full">
-                    <X size={24} />
-                </button>
+                <button className="absolute top-4 right-4 text-white p-2 bg-white/20 rounded-full"><X size={24} /></button>
                 <img src={displayImage} className="max-w-full max-h-full object-contain" />
             </motion.div>
         )}
@@ -313,9 +282,7 @@ const ComponentDetail = () => {
             {displayImage ? (
               <>
                 <img src={displayImage} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
-                    <ZoomIn className="text-white" size={32} />
-                </div>
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"><ZoomIn className="text-white" size={32} /></div>
               </>
             ) : (
               <span className="text-gray-600 text-xs">No Image</span>
@@ -324,13 +291,7 @@ const ComponentDetail = () => {
           
           {isEditing && (
             <div className="flex space-x-3">
-                <button 
-                type="button"
-                onClick={() => setShowCamera(true)}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg flex items-center space-x-2 text-sm"
-                >
-                <Camera size={16} /> <span>Camera</span>
-                </button>
+                <button type="button" onClick={() => setShowCamera(true)} className="px-4 py-2 bg-primary-600 text-white rounded-lg flex items-center space-x-2 text-sm"><Camera size={16} /> <span>Camera</span></button>
                 <label className="px-4 py-2 bg-dark-800 text-gray-300 rounded-lg border border-dark-700 flex items-center space-x-2 text-sm cursor-pointer hover:bg-dark-700">
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'image')} />
                 <span>Upload</span>
@@ -339,86 +300,62 @@ const ComponentDetail = () => {
           )}
         </div>
 
+        {/* Location Display (Only show if grid position exists) */}
+        {pos && (
+            <div className="bg-dark-800 p-4 rounded-xl border border-dark-700 text-sm text-gray-400 flex justify-between">
+                <span>Location:</span>
+                <span className="text-white font-mono">{pos}</span>
+            </div>
+        )}
+
         <div className="space-y-4">
+          {/* Name Field */}
           <div>
             <label className="block text-sm text-gray-400 mb-1">Name</label>
             {isEditing ? (
-                <input 
-                required
-                type="text" 
-                className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white focus:outline-none focus:border-primary-500"
-                value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}
-                />
+                <input required type="text" className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white focus:outline-none focus:border-primary-500" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
             ) : (
                 <div className="text-xl font-bold text-white">{formData.name}</div>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          {/* Qty */}
+          <div>
               <label className="block text-sm text-gray-400 mb-1">Quantity</label>
               {isEditing ? (
-                  <input 
-                    type="number" 
-                    className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white focus:outline-none focus:border-primary-500"
-                    value={formData.quantity}
-                    onChange={e => setFormData({...formData, quantity: e.target.value})}
-                  />
+                  <input type="number" className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white focus:outline-none focus:border-primary-500" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
               ) : (
                   <div className="text-lg text-white font-mono">{formData.quantity}</div>
               )}
-            </div>
           </div>
 
+          {/* Specs */}
           <div>
             <label className="block text-sm text-gray-400 mb-1">Specifications</label>
             {isEditing ? (
-                <textarea 
-                className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white focus:outline-none focus:border-primary-500 h-24"
-                value={formData.specification}
-                onChange={e => setFormData({...formData, specification: e.target.value})}
-                />
+                <textarea className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white focus:outline-none focus:border-primary-500 h-24" value={formData.specification} onChange={e => setFormData({...formData, specification: e.target.value})} />
             ) : (
                 <div className="text-gray-300 whitespace-pre-wrap">{formData.specification || "N/A"}</div>
             )}
           </div>
 
-          {/* Sub-Items Section */}
+          {/* Sub-Items */}
           <div>
             <div className="flex justify-between items-center mb-2">
                 <label className="block text-sm text-gray-400">Contents / Sub-items</label>
                 {isEditing && (
-                    <button type="button" onClick={addSubItem} className="text-xs flex items-center text-primary-400 hover:text-white">
-                        <Plus size={14} className="mr-1" /> Add Item
-                    </button>
+                    <button type="button" onClick={addSubItem} className="text-xs flex items-center text-primary-400 hover:text-white"><Plus size={14} className="mr-1" /> Add Item</button>
                 )}
             </div>
-            
             <div className="space-y-2">
                 {subItems.length === 0 && !isEditing && <p className="text-xs text-gray-600 italic">No sub-items listed.</p>}
-                
                 {subItems.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                         {isEditing ? (
                             <>
-                                <input 
-                                    type="text" 
-                                    placeholder="Item Name"
-                                    className="flex-1 bg-dark-900 border border-dark-700 rounded-lg p-2 text-sm text-white"
-                                    value={item.name}
-                                    onChange={(e) => updateSubItem(idx, 'name', e.target.value)}
-                                />
-                                <input 
-                                    type="number" 
-                                    placeholder="Qty"
-                                    className="w-20 bg-dark-900 border border-dark-700 rounded-lg p-2 text-sm text-white text-center"
-                                    value={item.qty}
-                                    onChange={(e) => updateSubItem(idx, 'qty', e.target.value)}
-                                />
-                                <button type="button" onClick={() => removeSubItem(idx)} className="p-2 text-red-500 hover:bg-dark-800 rounded">
-                                    <Trash2 size={16} />
-                                </button>
+                                <input type="text" placeholder="Item Name" className="flex-1 bg-dark-900 border border-dark-700 rounded-lg p-2 text-sm text-white" value={item.name} onChange={(e) => updateSubItem(idx, 'name', e.target.value)} />
+                                <input type="number" placeholder="Qty" className="w-20 bg-dark-900 border border-dark-700 rounded-lg p-2 text-sm text-white text-center" value={item.qty} onChange={(e) => updateSubItem(idx, 'qty', e.target.value)} />
+                                <button type="button" onClick={() => removeSubItem(idx)} className="p-2 text-red-500 hover:bg-dark-800 rounded"><Trash2 size={16} /></button>
                             </>
                         ) : (
                             <div className="w-full flex justify-between items-center p-2 bg-dark-800 rounded border border-dark-700">
@@ -431,27 +368,21 @@ const ComponentDetail = () => {
             </div>
           </div>
 
-          {/* Attachments Section */}
+          {/* Attachments */}
           <div>
             <label className="block text-sm text-gray-400 mb-2">Attachments</label>
-            
             <div className="space-y-2 mb-3">
                 {existingAttachments.map(att => (
                     <div key={att.id} className="flex items-center space-x-3 p-3 bg-dark-800 rounded-lg border border-dark-700">
                         <div onClick={() => openAttachment(att.file_path, att.file_type)} className="flex-1 flex items-center space-x-3 cursor-pointer">
                             <FileText size={20} className="text-primary-400" />
-                            <span className="text-sm text-white truncate">
-                                {att.file_path.split('/').pop()}
-                            </span>
+                            <span className="text-sm text-white truncate">{att.file_path.split('/').pop().substring(14)}</span>
                         </div>
                         {isEditing && (
-                            <button type="button" onClick={() => deleteExistingAttachment(att.id)} className="text-red-500 p-2 hover:bg-dark-900 rounded-lg">
-                                <Trash2 size={16} />
-                            </button>
+                            <button type="button" onClick={() => deleteExistingAttachment(att.id)} className="text-red-500 p-2 hover:bg-dark-900 rounded-lg"><Trash2 size={16} /></button>
                         )}
                     </div>
                 ))}
-                
                 {formData.attachments.map((file, idx) => (
                     <div key={idx} className="flex items-center space-x-3 p-3 bg-dark-800/50 border border-dashed border-dark-600 rounded-lg">
                         <Paperclip size={20} className="text-gray-500" />
@@ -463,7 +394,6 @@ const ComponentDetail = () => {
                     </div>
                 ))}
             </div>
-
             {isEditing && (
                  <label className="flex items-center justify-center space-x-2 w-full p-3 border border-dashed border-dark-600 rounded-lg cursor-pointer hover:bg-dark-800 transition-colors">
                     <Paperclip size={18} className="text-gray-400" />
@@ -477,27 +407,16 @@ const ComponentDetail = () => {
             <div>
                 <label className="block text-sm text-gray-400 mb-1">Link</label>
                 {isEditing ? (
-                    <input 
-                    type="url" 
-                    className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white"
-                    value={formData.purchase_link}
-                    onChange={e => setFormData({...formData, purchase_link: e.target.value})}
-                    />
+                    <input type="url" className="w-full bg-dark-900 border border-dark-700 rounded-xl p-3 text-white" value={formData.purchase_link} onChange={e => setFormData({...formData, purchase_link: e.target.value})} />
                 ) : (
-                    <a href={formData.purchase_link} target="_blank" rel="noopener noreferrer" className="text-primary-400 hover:underline flex items-center space-x-1">
-                        <LinkIcon size={14} /> <span>Open Link</span>
-                    </a>
+                    <a href={formData.purchase_link} target="_blank" rel="noopener noreferrer" className="text-primary-400 hover:underline flex items-center space-x-1"><LinkIcon size={14} /> <span>Open Link</span></a>
                 )}
             </div>
           )}
         </div>
 
         {isEditing && (
-            <button 
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary-600 hover:bg-primary-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary-600/20 flex items-center justify-center space-x-2"
-            >
+            <button type="submit" disabled={loading} className="w-full bg-primary-600 hover:bg-primary-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary-600/20 flex items-center justify-center space-x-2">
             {loading ? 'Saving...' : <><Save size={20} /><span>Save Changes</span></>}
             </button>
         )}

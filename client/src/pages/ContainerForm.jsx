@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Trash2, Box, Save, ArrowLeft, Minus, Camera, X } from 'lucide-react';
+import { Plus, Trash2, Box, Save, ArrowLeft, Minus, Camera, Grid, List as ListIcon } from 'lucide-react';
 import api from '../services/api';
 import CameraCapture from '../components/CameraCapture';
 
@@ -14,12 +14,13 @@ const ContainerForm = () => {
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [image, setImage] = useState(null); // File object
+  const [image, setImage] = useState(null); 
   const [previewUrl, setPreviewUrl] = useState('');
   const [existingImageUrl, setExistingImageUrl] = useState('');
 
+  // Added config_type to state
   const [sections, setSections] = useState([
-    { name: 'Tray 1', rows: 6, cols: 5 }
+    { name: 'Tray 1', rows: 6, cols: 5, config_type: 'grid' }
   ]);
 
   useEffect(() => {
@@ -35,8 +36,9 @@ const ContainerForm = () => {
             setSections(data.sections.map(s => ({
               id: s.id, 
               name: s.name,
-              rows: s.rows,
-              cols: s.cols
+              rows: s.rows || 6,
+              cols: s.cols || 5,
+              config_type: s.config_type || 'grid'
             })));
           }
         })
@@ -60,12 +62,13 @@ const ContainerForm = () => {
 
   const addSection = () => {
     const nextNum = sections.length + 1;
-    setSections([...sections, { name: `Tray ${nextNum}`, rows: 6, cols: 5 }]);
+    // Default to grid
+    setSections([...sections, { name: `Section ${nextNum}`, rows: 6, cols: 5, config_type: 'grid' }]);
   };
 
   const removeSection = (index) => {
     if (isEditMode && sections[index].id) {
-      alert("Cannot delete existing trays in this version to prevent data loss.");
+      alert("Cannot delete existing sections in this version.");
       return;
     }
     const newSections = sections.filter((_, i) => i !== index);
@@ -82,6 +85,13 @@ const ContainerForm = () => {
     const currentVal = sections[index][field];
     const newVal = Math.max(1, currentVal + delta);
     updateSection(index, field, newVal);
+  };
+
+  const toggleType = (index) => {
+      // Toggle between grid and list
+      const current = sections[index].config_type;
+      const newType = current === 'list' ? 'grid' : 'list';
+      updateSection(index, 'config_type', newType);
   };
 
   const handleSubmit = async (e) => {
@@ -132,7 +142,7 @@ const ContainerForm = () => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         
-        {/* Image Upload Section */}
+        {/* Image */}
         <div className="flex flex-col items-center justify-center space-y-4 bg-dark-800 p-6 rounded-2xl border border-dark-700">
           <div className="w-full h-48 bg-dark-900 rounded-xl border border-dark-700 overflow-hidden flex items-center justify-center relative">
             {displayImage ? (
@@ -160,13 +170,14 @@ const ContainerForm = () => {
           </div>
         </div>
 
+        {/* Details */}
         <div className="bg-dark-800 p-6 rounded-2xl border border-dark-700 space-y-4">
           <h2 className="text-lg font-semibold text-white flex items-center space-x-2">
             <Box size={20} className="text-primary-500" />
             <span>Details</span>
           </h2>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Name (e.g. Red Cabinet)</label>
+            <label className="block text-sm text-gray-400 mb-1">Name</label>
             <input 
               required
               type="text" 
@@ -185,9 +196,10 @@ const ContainerForm = () => {
           </div>
         </div>
 
+        {/* Sections */}
         <div className="space-y-4">
           <div className="flex justify-between items-center px-1">
-            <h2 className="text-lg font-semibold text-white">Configuration</h2>
+            <h2 className="text-lg font-semibold text-white">Sections (Trays/Drawers)</h2>
             <button 
               type="button"
               onClick={addSection}
@@ -207,7 +219,6 @@ const ContainerForm = () => {
                 exit={{ opacity: 0 }}
                 className="bg-dark-800 p-5 rounded-2xl border border-dark-700 relative group"
               >
-                {/* Delete Button */}
                 {(!isEditMode || !section.id) && sections.length > 1 && (
                   <button 
                     type="button"
@@ -230,7 +241,23 @@ const ContainerForm = () => {
                     />
                   </div>
 
-                  {['rows', 'cols'].map(field => (
+                  {/* Type Selector */}
+                  <div className="md:col-span-2 flex items-center justify-between bg-dark-900 p-2 rounded-lg border border-dark-700">
+                        <div className="flex items-center space-x-2 text-sm text-gray-400 ml-2">
+                            {section.config_type === 'list' ? <ListIcon size={16}/> : <Grid size={16}/>}
+                            <span>Type: <strong className="text-white uppercase">{section.config_type || 'grid'}</strong></span>
+                        </div>
+                        <button 
+                            type="button"
+                            onClick={() => toggleType(index)}
+                            className="text-xs bg-dark-700 hover:bg-dark-600 text-white px-3 py-1.5 rounded-md transition-colors"
+                        >
+                            Switch to {section.config_type === 'list' ? 'Grid' : 'List'}
+                        </button>
+                  </div>
+
+                  {/* Grid Controls (Only if grid type) */}
+                  {section.config_type !== 'list' && ['rows', 'cols'].map(field => (
                     <div key={field}>
                         <label className="block text-xs uppercase tracking-wide text-gray-500 font-bold mb-1">
                             {field === 'rows' ? 'Rows' : 'Cols'}
