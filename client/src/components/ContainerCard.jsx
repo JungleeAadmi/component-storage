@@ -16,7 +16,13 @@ const ContainerCard = ({ container, onUpdate }) => {
       setShowMenu(false);
       return;
     }
-    navigate(`/container/${container.id}`);
+    
+    // Feature: Direct access for single-list containers (e.g. Pegboards, Toolboxes)
+    if (container.sections && container.sections.length === 1 && container.sections[0].config_type === 'list') {
+        navigate(`/tray/${container.sections[0].id}`);
+    } else {
+        navigate(`/container/${container.id}`);
+    }
   };
 
   const handleLongPress = () => {
